@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Paper, Container } from '@mui/material';
+// Import Shadcn components
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
-const Login = ({ onLoginSuccess, onSwitchToRegister }) => { // Aggiunta onSwitchToRegister
+const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Simuliamo il login recuperando i dati dal localStorage per il test
+    // Simulate login by retrieving user data from localStorage for testing
     const savedUser = JSON.parse(localStorage.getItem('user'));
     
     if (savedUser && savedUser.email === email) {
       onLoginSuccess(savedUser);
     } else {
-      // Se non trova l'utente registrato, creiamo un utente di test
+      // If no registered user is found, we create a mock test user
       const mockUser = { 
           email: email, 
-          name: 'Utente', 
+          name: 'User', 
           surname: 'Test', 
           role: 'Organizer' 
       };
@@ -25,46 +28,57 @@ const Login = ({ onLoginSuccess, onSwitchToRegister }) => { // Aggiunta onSwitch
   };
 
   return (
-    <Container maxWidth="xs">
-      <Paper elevation={3} sx={{ p: 4, mt: 8, borderRadius: 2 }}>
-        <Typography variant="h5" align="center" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>
-          QUADBALLHOLIC LOGIN
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <TextField
-            label="Email"
-            fullWidth
-            margin="normal"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <TextField
-            label="Password"
-            type="password"
-            fullWidth
-            margin="normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <Button type="submit" fullWidth variant="contained" color="primary" sx={{ mt: 3, mb: 1, py: 1.5 }}>
-            Log In
-          </Button>
+    // "min-h-screen" centers everything vertically on the page
+    <div className="flex items-center justify-center min-h-[80vh] px-4">
+      <Card className="w-full max-w-md shadow-lg border-t-4 border-t-blue-600">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center tracking-tighter text-blue-600">
+            QUADBALLHOLIC LOGIN
+          </CardTitle>
+          <CardDescription className="text-center">
+            Log in to manage your tournaments
+          </CardDescription>
+        </CardHeader>
+        
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none">Email</label>
+              <Input 
+                type="email" 
+                placeholder="name@example.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none">Password</label>
+              <Input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </CardContent>
           
-          {/* QUESTO È IL TASTO CHE MANCAVA */}
-          <Button 
-            fullWidth 
-            variant="text" 
-            color="secondary" 
-            onClick={onSwitchToRegister} // Attiva il passaggio alla registrazione
-            sx={{ fontWeight: 'bold' }}
-          >
-            Are you here for the first time? Sign up
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+              Log In
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              className="w-full text-sm font-semibold text-slate-600"
+              onClick={onSwitchToRegister}
+            >
+              Are you here for the first time? Sign up
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
   );
 };
 

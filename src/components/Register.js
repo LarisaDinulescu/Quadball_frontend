@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Paper, Container, MenuItem } from '@mui/material';
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
+// Import new Shadcn Select components
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 const Register = ({ onRegisterSuccess, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -8,56 +18,95 @@ const Register = ({ onRegisterSuccess, onSwitchToLogin }) => {
     age: '',
     email: '',
     password: '',
-    role: 'Spectator' // Ruolo di default
+    role: 'Spectator'
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Specific function for Shadcn Select component
+  const handleRoleChange = (value) => {
+    setFormData({ ...formData, role: value });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Qui simuli il salvataggio dei dati anagrafici
     localStorage.setItem('user', JSON.stringify(formData));
     onRegisterSuccess(formData);
   };
 
   return (
-    <Container maxWidth="xs">
-      <Paper elevation={3} sx={{ p: 4, mt: 4, borderRadius: 2 }}>
-        <Typography variant="h5" align="center" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>
-          REGISTER
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <TextField label="Name" name="name" fullWidth margin="dense" onChange={handleChange} required />
-          <TextField label="Surname" name="surname" fullWidth margin="dense" onChange={handleChange} required />
-          <TextField label="Age" name="age" type="number" fullWidth margin="dense" onChange={handleChange} required />
-          <TextField label="Email" name="email" type="email" fullWidth margin="dense" onChange={handleChange} required />
-          <TextField label="Password" name="password" type="password" fullWidth margin="dense" onChange={handleChange} required />
-          
-          <TextField
-            select
-            label="Role"
-            name="role"
-            fullWidth
-            margin="dense"
-            value={formData.role}
-            onChange={handleChange}
-          >
-            <MenuItem value="Organizer">Organizer (O)</MenuItem>
-            <MenuItem value="Team Manager">Team Manager (TM)</MenuItem>
-            <MenuItem value="Spectator">Spectator (S)</MenuItem>
-          </TextField>
+    <div className="flex items-center justify-center min-h-screen py-10 px-4">
+      <Card className="w-full max-w-md shadow-lg border-t-4 border-t-blue-600">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center tracking-tighter text-blue-600">
+            REGISTER
+          </CardTitle>
+          <CardDescription className="text-center">
+            Create your Quadballholic profile
+          </CardDescription>
+        </CardHeader>
 
-          <Button type="submit" fullWidth variant="contained" color="primary" sx={{ mt: 3, mb: 1 }}>
-            Done
-          </Button>
-          <Button fullWidth variant="text" onClick={onSwitchToLogin}>
-            Do you already have an account? Log In
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Name</label>
+                <Input name="name" placeholder="John" onChange={handleChange} required />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Surname</label>
+                <Input name="surname" placeholder="Doe" onChange={handleChange} required />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Age</label>
+              <Input name="age" type="number" placeholder="20" onChange={handleChange} required />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Email</label>
+              <Input name="email" type="email" placeholder="john.doe@example.com" onChange={handleChange} required />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Password</label>
+              <Input name="password" type="password" onChange={handleChange} required />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Role</label>
+              <Select onValueChange={handleRoleChange} defaultValue={formData.role}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                {/* Modifica qui: aggiunte classi per opacità e sovrapposizione */}
+                <SelectContent className="bg-white border shadow-md z-50">
+                  <SelectItem value="Organizer">Organizer (O)</SelectItem>
+                  <SelectItem value="Team Manager">Team Manager (TM)</SelectItem>
+                  <SelectItem value="Spectator">Spectator (S)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+
+          <CardFooter className="flex flex-col space-y-4 pt-4">
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+              Done
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full text-sm font-semibold text-slate-600"
+              onClick={onSwitchToLogin}
+            >
+              Do you already have an account? Log In
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
   );
 };
 
