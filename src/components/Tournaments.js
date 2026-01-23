@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Trophy, Calendar, MapPin, ChevronLeft } from "lucide-react";
+import { Trophy, Calendar, MapPin, ChevronLeft, Plus } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Tournaments = () => {
-  const [tournaments, setTournaments] = useState([]); // Lista di tutti i tornei
-  const [selectedBracket, setSelectedBracket] = useState(null); // Dati del torneo selezionato (lista di liste)
+  const [tournaments, setTournaments] = useState([]); 
+  const [selectedBracket, setSelectedBracket] = useState(null); 
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // 1. Carica la lista iniziale dei tornei
+  // Get user data from localStorage to check roles
+  const user = JSON.parse(localStorage.getItem('user'));
+  const isOrganizer = user?.role === 'ROLE_ORGANIZATION_MANAGER';
   useEffect(() => {
     axios.get('http://localhost:8080/api/tournaments')
       .then(res => {
@@ -22,7 +26,6 @@ const Tournaments = () => {
       });
   }, []);
 
-  // 2. Funzione per caricare il bracket di un torneo specifico
   const handleSelectTournament = (id) => {
     setLoading(true);
     axios.get(`http://localhost:8080/api/tournaments/${id}/bracket`)
@@ -42,7 +45,6 @@ const Tournaments = () => {
     <div className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-7xl mx-auto">
         
-        {/* --- VISTA B: IL TABELLONE (BRACKET) --- */}
         {selectedBracket ? (
           <div>
             <Button 
@@ -71,11 +73,23 @@ const Tournaments = () => {
             </div>
           </div>
         ) : (
-          /* --- VISTA A: LA LISTA DEI TORNEI --- */
+          /* --- VIEW A: TOURNAMENTS LIST --- */
           <div>
-            <h1 className="text-4xl font-black text-slate-900 mb-10 flex items-center gap-3 uppercase italic">
-              <Trophy className="text-blue-600" size={40} /> Available Tournaments
-            </h1>
+            <div className="flex justify-between items-center mb-10">
+              <h1 className="text-4xl font-black text-slate-900 flex items-center gap-3 uppercase italic">
+                <Trophy className="text-blue-600" size={40} /> Available Tournaments
+              </h1>
+              
+              {/* Button visible ONLY for Organizers */}
+              {isOrganizer && (
+                <Button 
+                  onClick={() => navigate('/tournaments/create')}
+                  className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Plus size={18} /> Create Tournament
+                </Button>
+              )}
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {tournaments.map((t) => (
@@ -107,7 +121,6 @@ const Tournaments = () => {
   );
 };
 
-// Componente Match interno
 const MatchCard = ({ match }) => (
   <Card className="shadow-md border-l-4 border-l-blue-600 bg-white min-w-[200px]">
     <CardContent className="p-4 space-y-3">

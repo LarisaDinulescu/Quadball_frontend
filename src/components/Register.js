@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 // Import new Shadcn Select components
 import {
@@ -15,7 +16,7 @@ const Register = ({ onRegisterSuccess, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
-    age: '',
+    birthDate: '',
     email: '',
     password: '',
     role: 'Spectator'
@@ -61,9 +62,14 @@ const Register = ({ onRegisterSuccess, onSwitchToLogin }) => {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Age</label>
-              <Input name="age" type="number" placeholder="20" onChange={handleChange} required />
+           <div className="space-y-2">
+              <Label htmlFor="birthDate">Date of Birth</Label>
+              <Input 
+                id="birthDate" 
+                type="date" 
+                required 
+                onChange={(e) => setFormData({...formData, birthDate: e.target.value})} 
+              />
             </div>
 
             <div className="space-y-1">

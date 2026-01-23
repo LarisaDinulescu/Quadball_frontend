@@ -15,7 +15,9 @@ import Login from './components/Login';
 import Register from './components/Register'; 
 import Profile from './components/Profile';
 import PlayerManagement from './components/players/PlayerManagement'; 
-import Tournaments from './components/Tournaments'; // <--- AGGIUNTO QUESTO IMPORT
+import Tournaments from './components/Tournaments'; 
+import ResetPassword from './components/ResetPassword';
+import CreateTournament from './components/CreateTournament';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -36,49 +38,53 @@ function App() {
     setUser(null);
   };
 
+  // --- INTERNAL NAVBAR COMPONENT ---
   const GlobalNavbar = () => {
     const navigate = useNavigate();
-  return (
-    <AppBar position="static" color="primary" elevation={4}>
-      <Toolbar>
-        <Typography 
-          variant="h6" 
-          sx={{ flexGrow: 1, fontWeight: 'bold', cursor: 'pointer' }} 
-          onClick={() => navigate('/')}
-        >
-          QUADBALLHOLIC
-        </Typography>
-        
-        {/* AGGIUNTO: Bottone Home */}
-        <Button color="inherit" component={Link} to="/">Home</Button>
-        
-        {/* Bottoni esistenti */}
-        <Button color="inherit" component={Link} to="/stadiums">Stadiums</Button>
-        <Button color="inherit" component={Link} to="/tournaments">Tournaments</Button>
-        <Button color="inherit" component={Link} to="/live">Live</Button>
+    return (
+      <AppBar position="static" color="primary" elevation={4}>
+        <Toolbar>
+          <Typography 
+            variant="h6" 
+            sx={{ flexGrow: 1, fontWeight: 'bold', cursor: 'pointer' }} 
+            onClick={() => navigate('/')}
+          >
+            QUADBALLHOLIC
+          </Typography>
+          
+          <Button color="inherit" component={Link} to="/">Home</Button>
+          <Button color="inherit" component={Link} to="/stadiums">Stadiums</Button>
+          <Button color="inherit" component={Link} to="/tournaments">Tournaments</Button>
+          <Button color="inherit" component={Link} to="/live">Live</Button>
 
-        {user ? (
-          <>
-            <Button color="inherit" component={Link} to="/dashboard/players">Players</Button>
-            <Button color="inherit" component={Link} to="/dashboard">Profile</Button>
-            <Typography variant="body2" sx={{ ml: 2, mr: 2, fontStyle: 'italic', borderLeft: '1px solid white', pl: 2 }}>
-              {user.email}
-            </Typography>
-            <Button variant="outlined" color="inherit" onClick={handleLogout} sx={{ borderColor: 'rgba(255,255,255,0.5)' }}>
-              Logout
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button color="inherit" component={Link} to="/login">Login</Button>
-            <Button variant="outlined" color="inherit" component={Link} to="/register" sx={{ ml: 1, borderColor: 'rgba(255,255,255,0.5)' }}>
-              Register
-            </Button>
-          </>
-        )}
-      </Toolbar>
-    </AppBar>
-  );
+          {user ? (
+            <>
+              {/* Only visible to Organization Managers */}
+              {user.role === 'ROLE_ORGANIZATION_MANAGER' && (
+                <Button color="inherit" component={Link} to="/dashboard/players">Players</Button>
+              )}
+              
+              <Button color="inherit" component={Link} to="/dashboard">Profile</Button>
+              
+              <Typography variant="body2" sx={{ ml: 2, mr: 2, fontStyle: 'italic', borderLeft: '1px solid white', pl: 2 }}>
+                {user.email}
+              </Typography>
+              
+              <Button variant="outlined" color="inherit" onClick={handleLogout} sx={{ borderColor: 'rgba(255,255,255,0.5)' }}>
+                Logout
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button color="inherit" component={Link} to="/login">Login</Button>
+              <Button variant="outlined" color="inherit" component={Link} to="/register" sx={{ ml: 1, borderColor: 'rgba(255,255,255,0.5)' }}>
+                Register
+              </Button>
+            </>
+          )}
+        </Toolbar>
+      </AppBar>
+    );
   };
 
   return (
@@ -87,11 +93,11 @@ function App() {
         <GlobalNavbar /> 
 
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Home />} />
-
-          {/* AGGIUNTA LA ROTTA PER I TORNEI */}
           <Route path="/tournaments" element={<Tournaments />} />
-
+          <Route path="/reset-password" element={<ResetPassword />} />
+          
           <Route 
             path="/login" 
             element={!user ? <Login onLoginSuccess={(userData) => setUser(userData)} /> : <Navigate replace to="/dashboard" />} 
@@ -101,13 +107,40 @@ function App() {
             element={!user ? <Register onRegisterSuccess={(userData) => setUser(userData)} /> : <Navigate replace to="/dashboard" />} 
           />
 
+          {/* Protected Route: Dashboard (All logged-in users) */}
           <Route 
             path="/dashboard" 
             element={user ? <DashboardHome user={user} /> : <Navigate replace to="/login" />} 
           />
+
+          <Route 
+            path="/tournaments/create" 
+            element={
+              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? <CreateTournament /> 
+                : <Navigate replace to="/tournaments" />
+            } 
+          />
+
+
+          {/* Protected Route: Player Management (Managers only) */}
           <Route 
             path="/dashboard/players" 
-            element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <PlayerManagementWrapper /> : <Navigate replace to="/dashboard" />} 
+            element={
+              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? <PlayerManagementWrapper /> 
+                : <Navigate replace to="/dashboard" />
+            } 
+          />
+
+          {/* Protected Route: Create Tournament (Managers only) */}
+          <Route 
+            path="/tournaments/create" 
+            element={
+              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? <div className="p-10 text-center font-bold">Create Tournament Form (Coming Soon)</div> 
+                : <Navigate replace to="/tournaments" />
+            } 
           />
           
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -125,6 +158,7 @@ function DashboardHome({ user }) {
       <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
         <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>Dashboard</Typography>
         <Typography>Welcome back, <strong>{user.name}</strong>!</Typography>
+        <Typography variant="body2" color="textSecondary">Role: {user.role}</Typography>
       </Paper>
       <Divider sx={{ my: 4 }}>YOUR PROFILE</Divider>
       <Profile user={user} />

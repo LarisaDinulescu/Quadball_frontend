@@ -34,11 +34,16 @@ const Profile = ({ user, onNavigateToTeams, onNavigateToPlayers }) => {
               <p className="text-lg font-semibold">{user.name} {user.surname}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-400">Age</p>
+              <p className="text-xs text-slate-400">Date of Birth</p>
               <p className="text-lg font-semibold flex items-center gap-2">
-                <Calendar size={18} className="text-slate-400" /> {user.age} years old
+                <Calendar size={18} className="text-slate-400" /> 
+                {/* If user.birthDate is a string like "2000-01-01", 
+                  it will display directly. 
+                */}
+                {user.birthDate || "Not provided"}
               </p>
             </div>
+            
           </CardContent>
         </Card>
 

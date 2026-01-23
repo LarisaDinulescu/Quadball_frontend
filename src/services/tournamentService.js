@@ -27,14 +27,29 @@ const tournamentService = {
     }
   },
 
+  /**
+   * Creates a new tournament
+   * Only accessible by ROLE_ORGANIZATION_MANAGER
+   */
   createTournament: async (tournamentData) => {
     try {
-      // Axios automatically transforms tournamentData into JSON
       const response = await api.post('/tournaments', tournamentData);
       return response.data;
     } catch (error) {
-      // Intercept the error to provide clearer feedback
       console.error("Error during tournament creation:", error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a tournament
+   */
+  deleteTournament: async (id) => {
+    try {
+      const response = await api.delete(`/tournaments/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting tournament ${id}:`, error);
       throw error;
     }
   }
