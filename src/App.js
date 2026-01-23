@@ -14,7 +14,9 @@ import Home from './components/Home';
 import Login from './components/Login'; 
 import Register from './components/Register'; 
 import Profile from './components/Profile';
-import PlayerManagement from './components/players/PlayerManagement'; 
+import PlayerManagement from './components/players/PlayerManagement';
+import LiveMatch from './components/live/LiveMatch';
+import MatchDetail from './components/live/MatchDetail';
 import Tournaments from './components/Tournaments'; 
 import ResetPassword from './components/ResetPassword';
 import CreateTournament from './components/CreateTournament';
@@ -97,6 +99,9 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/live" element={<LiveMatch />} />
+          {/* Dettaglio singola partita (NUOVO) */}
+          <Route path="/live/:id" element={<MatchDetail />} />
           
           <Route 
             path="/login" 
