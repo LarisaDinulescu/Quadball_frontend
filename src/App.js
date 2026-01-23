@@ -16,6 +16,7 @@ import Register from './components/Register';
 import Profile from './components/Profile';
 import PlayerManagement from './components/players/PlayerManagement'; 
 import Tournaments from './components/Tournaments'; 
+import TeamsPage from './components/teams/TeamsPage';
 import ResetPassword from './components/ResetPassword';
 import CreateTournament from './components/CreateTournament';
 
@@ -53,6 +54,7 @@ function App() {
           </Typography>
           
           <Button color="inherit" component={Link} to="/">Home</Button>
+          <Button color="inherit" component={Link} to="/teams">Teams</Button>
           <Button color="inherit" component={Link} to="/stadiums">Stadiums</Button>
           <Button color="inherit" component={Link} to="/tournaments">Tournaments</Button>
           <Button color="inherit" component={Link} to="/live">Live</Button>
@@ -112,6 +114,8 @@ function App() {
             path="/dashboard" 
             element={user ? <DashboardHome user={user} /> : <Navigate replace to="/login" />} 
           />
+
+          <Route path="/teams" element={<TeamsPage />} />
 
           <Route 
             path="/tournaments/create" 
