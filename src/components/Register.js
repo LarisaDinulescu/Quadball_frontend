@@ -76,20 +76,7 @@ const Register = ({ onRegisterSuccess, onSwitchToLogin }) => {
               <Input name="password" type="password" onChange={handleChange} required />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Role</label>
-              <Select onValueChange={handleRoleChange} defaultValue={formData.role}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                {/* Modifica qui: aggiunte classi per opacità e sovrapposizione */}
-                <SelectContent className="bg-white border shadow-md z-50">
-                  <SelectItem value="Organizer">Organizer (O)</SelectItem>
-                  <SelectItem value="Team Manager">Team Manager (TM)</SelectItem>
-                  <SelectItem value="Spectator">Spectator (S)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+           
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4 pt-4">
