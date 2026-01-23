@@ -68,29 +68,7 @@ const Profile = ({ user, onNavigateToTeams, onNavigateToPlayers }) => {
         </Card>
       </div>
 
-      <div className="mt-10 p-6 border border-dashed border-slate-300 rounded-lg bg-slate-50">
-        <h3 className="text-lg font-semibold text-slate-700 mb-2">Available Actions</h3>
-        <p className="text-sm text-slate-500 mb-4">
-          Based on your role as {user.role}, here you can manage your tournaments or view the rankings.
-        </p>
-        
-        {user.role === 'ROLE_ORGANIZATION_MANAGER' && (
-          <div className="flex gap-4">
-            <button 
-              onClick={onNavigateToPlayers}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              Manage Players
-            </button>
-            <button 
-              onClick={onNavigateToTeams}
-              className="bg-slate-800 text-white px-4 py-2 rounded-md hover:bg-slate-900 transition-colors shadow-sm"
-            >
-              Manage Teams
-            </button>
-          </div>
-        )}
-      </div>
+      
     </div>
   );
 };

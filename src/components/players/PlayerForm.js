@@ -1,104 +1,146 @@
-import React from 'react';
-import { useForm } from "react-hook-form";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import playerService from "../../services/playerService";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
-import playerService from "../../services/playerService";
+import { Shield, ChevronLeft, UserPlus, Save, Loader2 } from "lucide-react";
 
-export function PlayerForm({ initialData, onSuccess }) {
-  // Initialize form with the fields required by your backend
-  const form = useForm({
-    defaultValues: initialData || {
-      firstName: "",
-      lastName: "",
-      position: "",
-      jerseyNumber: ""
-    },
+const PlayerForm = ({ initialData, onSuccess }) => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [formData, setFormData] = useState(initialData || {
+    firstName: "",
+    lastName: "",
+    position: "",
+    jerseyNumber: "",
   });
 
-  const onSubmit = async (data) => {
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Funzione specifica per gestire il cambio nel Select di Shadcn
+  const handlePositionChange = (value) => {
+    setFormData({ ...formData, position: value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.position) {
+      setError("Please select a position");
+      return;
+    }
+    
+    setError("");
+    setLoading(true);
+
     try {
       if (initialData?.id) {
-        await playerService.updatePlayer(initialData.id, data);
+        await playerService.updatePlayer(initialData.id, formData);
       } else {
-        await playerService.createPlayer(data);
+        await playerService.createPlayer(formData);
       }
-      onSuccess(); // Triggers refresh in PlayerManagement
-    } catch (error) {
-      console.error("Error saving player:", error);
+      onSuccess ? onSuccess() : navigate("/players");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save player.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 bg-white p-6 rounded-lg shadow-sm border">
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="firstName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>First Name</FormLabel>
-                <FormControl><Input placeholder="John" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Last Name</FormLabel>
-                <FormControl><Input placeholder="Doe" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+    <div className="w-full bg-white opacity-100">
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-6">
+          {error && (
+            <div className="p-3 bg-red-50 text-red-700 rounded-md border border-red-200 text-sm font-medium">
+              {error}
+            </div>
+          )}
 
-      
-          <FormField
-            control={form.control}
-            name="jerseyNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Jersey #</FormLabel>
-                <FormControl><Input type="number" placeholder="00" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        
-        <FormField
-          control={form.control}
-          name="position"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Field Position</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select Quadball Role" />
-                    </SelectTrigger>
-                </FormControl>
-                <SelectContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName" className="font-semibold text-slate-700">First Name</Label>
+              <Input
+                id="firstName"
+                name="firstName"
+                placeholder="e.g. Harry"
+                required
+                value={formData.firstName}
+                onChange={handleChange}
+                className="bg-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName" className="font-semibold text-slate-700">Last Name</Label>
+              <Input
+                id="lastName"
+                name="lastName"
+                placeholder="e.g. Potter"
+                required
+                value={formData.lastName}
+                onChange={handleChange}
+                className="bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* MENU A TENDINA PER LA POSIZIONE */}
+            <div className="space-y-2">
+              <Label htmlFor="position" className="font-semibold text-slate-700">Position</Label>
+              <Select 
+                onValueChange={handlePositionChange} 
+                defaultValue={formData.position}
+                required
+              >
+                <SelectTrigger className="bg-white border-slate-200 focus:ring-blue-600">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent className="bg-white opacity-100 shadow-xl border">
                   <SelectItem value="CHASER">Chaser</SelectItem>
                   <SelectItem value="BEATER">Beater</SelectItem>
                   <SelectItem value="KEEPER">Keeper</SelectItem>
                   <SelectItem value="SEEKER">Seeker</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            </div>
 
-        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 font-bold py-6 text-lg">
-          {initialData ? "Update Player Details" : "Add Player to Roster"}
-        </Button>
+            <div className="space-y-2">
+              <Label htmlFor="jerseyNumber" className="font-semibold text-slate-700">Jersey Number</Label>
+              <Input
+                id="jerseyNumber"
+                name="jerseyNumber"
+                type="number"
+                placeholder="0-99"
+                required
+                value={formData.jerseyNumber}
+                onChange={handleChange}
+                className="bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t">
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700 py-6 text-lg font-bold transition-all flex items-center justify-center gap-2"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+              {loading ? "Saving..." : initialData ? "Update Player" : "Save Player"}
+            </Button>
+          </div>
+        </div>
       </form>
-    </Form>
+    </div>
   );
-}
+};
+
+export default PlayerForm;

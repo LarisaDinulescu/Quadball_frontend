@@ -1,33 +1,21 @@
-import api from './api';
+import api from "./api"; // Usiamo l'istanza con l'interceptor che abbiamo creato
 
 const teamService = {
+  // Recupera tutti i team
   getAllTeams: async () => {
-    try {
-      const response = await api.get('/teams');
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching teams:", error);
-      throw error;
-    }
+    const response = await api.get("/teams");
+    return response.data;
   },
 
+  // Crea un nuovo team con i suoi componenti
   createTeam: async (teamData) => {
-    try {
-      const response = await api.post('/teams', teamData);
-      return response.data;
-    } catch (error) {
-      console.error("Error creating team:", error.response?.data || error.message);
-      throw error;
-    }
+    const response = await api.post("/teams", teamData);
+    return response.data;
   },
 
+  // Elimina un team
   deleteTeam: async (id) => {
-    try {
-      await api.delete(`/teams/${id}`);
-    } catch (error) {
-      console.error(`Error deleting team ${id}:`, error);
-      throw error;
-    }
+    await api.delete(`/teams/${id}`);
   }
 };
 

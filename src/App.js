@@ -18,9 +18,10 @@ import PlayerManagement from './components/players/PlayerManagement';
 import LiveMatch from './components/live/LiveMatch';
 import MatchDetail from './components/live/MatchDetail';
 import Tournaments from './components/Tournaments'; 
-import TeamsPage from './components/teams/TeamsPage';
 import ResetPassword from './components/ResetPassword';
 import CreateTournament from './components/CreateTournament';
+import TeamsPage from "./components/teams/TeamsPage";
+import CreateTeam from "./components/teams/CreateTeam";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -119,8 +120,15 @@ function App() {
             path="/dashboard" 
             element={user ? <DashboardHome user={user} /> : <Navigate replace to="/login" />} 
           />
-
           <Route path="/teams" element={<TeamsPage />} />
+          
+          <Route 
+            path="/teams/create" 
+             element={
+               user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? <CreateTeam /> 
+                : <Navigate replace to="/tournaments" />
+            } />
 
           <Route 
             path="/tournaments/create" 
@@ -130,7 +138,6 @@ function App() {
                 : <Navigate replace to="/tournaments" />
             } 
           />
-
 
           {/* Protected Route: Player Management (Managers only) */}
           <Route 
@@ -142,15 +149,7 @@ function App() {
             } 
           />
 
-          {/* Protected Route: Create Tournament (Managers only) */}
-          <Route 
-            path="/tournaments/create" 
-            element={
-              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
-                ? <div className="p-10 text-center font-bold">Create Tournament Form (Coming Soon)</div> 
-                : <Navigate replace to="/tournaments" />
-            } 
-          />
+        
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
