@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { User, Mail, Calendar, ShieldCheck } from "lucide-react";
 
 // Added onNavigateToPlayers to the props

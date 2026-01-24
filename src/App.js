@@ -11,17 +11,21 @@ import { Box, Container, Typography, Paper, Divider, AppBar, Toolbar, Button } f
 
 // Importing your components
 import Home from './components/Home'; 
-import Login from './components/Login'; 
-import Register from './components/Register'; 
-import Profile from './components/Profile';
+import Login from './components/auth/Login'; 
+import Register from './components/auth/Register'; 
+import Profile from './components/auth/Profile';
 import PlayerManagement from './components/players/PlayerManagement';
+import PlayerForm from "./components/players/PlayerForm";
 import LiveMatch from './components/live/LiveMatch';
 import MatchDetail from './components/live/MatchDetail';
-import Tournaments from './components/Tournaments'; 
-import ResetPassword from './components/ResetPassword';
-import CreateTournament from './components/CreateTournament';
+import Tournaments from './components/tournaments/Tournaments'; 
+import MatchReservation from './components/booking/MatchReservation';
+import ResetPassword from './components/auth/ResetPassword';
+import CreateTournament from './components/tournaments/CreateTournament';
 import TeamsPage from "./components/teams/TeamsPage";
 import CreateTeam from "./components/teams/CreateTeam";
+import StadiumPage from "./components/stadiums/Stadium";
+import CreateStadium from "./components/stadiums/CreateStadium";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -58,16 +62,13 @@ function App() {
           
           <Button color="inherit" component={Link} to="/">Home</Button>
           <Button color="inherit" component={Link} to="/teams">Teams</Button>
+          <Button color="inherit" component={Link} to="/players"> Players </Button>
           <Button color="inherit" component={Link} to="/stadiums">Stadiums</Button>
           <Button color="inherit" component={Link} to="/tournaments">Tournaments</Button>
           <Button color="inherit" component={Link} to="/live">Live</Button>
 
           {user ? (
             <>
-              {/* Only visible to Organization Managers */}
-              {user.role === 'ROLE_ORGANIZATION_MANAGER' && (
-                <Button color="inherit" component={Link} to="/dashboard/players">Players</Button>
-              )}
               
               <Button color="inherit" component={Link} to="/dashboard">Profile</Button>
               
@@ -121,6 +122,46 @@ function App() {
             element={user ? <DashboardHome user={user} /> : <Navigate replace to="/login" />} 
           />
           <Route path="/teams" element={<TeamsPage />} />
+
+          <Route path="/players" element={<PlayerManagement />} />
+
+          <Route 
+            path="/reservation" 
+            element={
+              user 
+                ? <MatchReservation /> 
+                : <Navigate replace to="/login" />
+            } 
+          />
+
+
+
+          <Route path="/stadiums" element={<StadiumPage />} />
+
+          <Route 
+            path="/stadiums/create" 
+            element={
+              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? (
+                  <Container maxWidth="sm" sx={{ mt: 8 }}>
+                    <CreateStadium />
+                  </Container>
+                )
+                : <Navigate replace to="/stadiums" />
+            } 
+          />
+          <Route 
+            path="/player/create" 
+            element={
+              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? (
+                  <Container maxWidth="sm" sx={{ mt: 8 }}>
+                    <PlayerForm />
+                  </Container>
+                )
+                : <Navigate replace to="/players" />
+            } 
+          />
           
           <Route 
             path="/teams/create" 
@@ -139,15 +180,7 @@ function App() {
             } 
           />
 
-          {/* Protected Route: Player Management (Managers only) */}
-          <Route 
-            path="/dashboard/players" 
-            element={
-              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
-                ? <PlayerManagementWrapper /> 
-                : <Navigate replace to="/dashboard" />
-            } 
-          />
+          
 
         
           
@@ -177,7 +210,7 @@ function DashboardHome({ user }) {
 function PlayerManagementWrapper() {
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>Players Management</Typography>
+      <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}></Typography>
       <PlayerManagement />
     </Container>
   );

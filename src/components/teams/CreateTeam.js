@@ -12,7 +12,7 @@ export default function CreateTeam() {
   const [loading, setLoading] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [city, setCity] = useState("");
-  const [members, setMembers] = useState([""]); // Iniziamo con un campo vuoto
+  const [members, setMembers] = useState([""]);
 
   const addMemberField = () => setMembers([...members, ""]);
   
