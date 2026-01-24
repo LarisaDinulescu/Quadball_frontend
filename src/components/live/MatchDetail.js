@@ -1,80 +1,52 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Box, Container, Typography, Paper, Grid, Avatar, Button, CircularProgress, Alert } from '@mui/material';
+import { ChevronLeft, Trophy, AlertCircle, CheckCircle2, Timer } from 'lucide-react';
 import liveService from '../../services/liveService';
 
-// --- MOCK DATA ---
-const MOCK_DATA = {
+// --- MOCK DETAIL DATA (HARRY POTTER) ---
+const MOCK_DETAIL = {
     1: {
-        id: 1,
-        homeTeam: "Milano Gators",
-        awayTeam: "Roma Centurions",
-        homeScore: 10,
-        awayScore: 10,
+        id: 1, homeTeam: "Gryffindor", awayTeam: "Slytherin",
+        // 40 - 30
+        homeScore: 40, awayScore: 30,
         schedule: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        period: "1st Half",
-        stadium: "Arena Civica, Milano",
-        status: "IN_PROGRESS",
+        period: "1st Half", stadium: "Hogwarts Pitch",
+        snitchCaughtBy: null,
         events: [
-            { time: "15:00", text: "Goal by Milano! (+10 pts)", type: "goal" },
-            { time: "12:30", text: "Bludger hit on Roma Seeker", type: "info" },
-            { time: "10:15", text: "Goal by Roma (+10 pts)", type: "goal" },
-            { time: "08:00", text: "Foul: Back contact by Milano Beater", type: "foul" },
-            { time: "00:00", text: "Match Started", type: "info" }
+            { time: "00:00", text: "Match Started", type: "info" },
+            { time: "05:00", text: "Goal by Slytherin Chaser (+10)", type: "goal" },
+            { time: "08:00", text: "Goal by Gryffindor (+10)", type: "goal" },
+            { time: "10:30", text: "Bludger hit on Slytherin Seeker", type: "info" },
+            { time: "12:00", text: "Goal by Gryffindor (+10)", type: "goal" },
+            { time: "15:00", text: "Goal by Gryffindor (+10)", type: "goal" }
         ]
     },
     2: {
-        id: 2,
-        homeTeam: "Venezia Krakens",
-        awayTeam: "Firenze Lilies",
-        homeScore: 30,
-        awayScore: 10,
+        id: 2, homeTeam: "Ravenclaw", awayTeam: "Hufflepuff",
+        // 150 - 160 (Hufflepuff wins by Snitch)
+        homeScore: 150, awayScore: 160,
         schedule: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-        period: "2nd Half",
-        stadium: "Stadio Penzo, Venezia",
-        status: "IN_PROGRESS",
+        period: "Finished", stadium: "Quidditch World Cup Stadium",
+        snitchCaughtBy: 'away',
         events: [
-            { time: "42:30", text: "Snitch caught by Venezia! (+30 pts)", type: "snitch" },
-            { time: "35:00", text: "Timeout called by Firenze", type: "info" },
-            { time: "30:20", text: "Goal by Firenze (+10 pts)", type: "goal" }
+            { time: "00:00", text: "Match Started", type: "info" },
+            { time: "35:00", text: "Timeout called by Ravenclaw", type: "info" },
+            { time: "40:00", text: "Goal Ravenclaw (+10)", type: "goal" },
+            { time: "42:00", text: "Goal Hufflepuff (+10)", type: "goal" },
+            { time: "45:20", text: "SNITCH CAUGHT BY HUFFLEPUFF! (+30)", type: "snitch" }
         ]
     }
 };
 
-// --- HELPERS ---
 const calculateElapsedTime = (startTimeStr) => {
     if (!startTimeStr) return "00:00";
     const start = new Date(startTimeStr).getTime();
     const now = new Date().getTime();
     if (now < start) return "00:00";
     const diffMs = now - start;
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const fmtMin = minutes < 10 ? `0${minutes}` : minutes;
-    const fmtSec = seconds < 10 ? `0${seconds}` : seconds;
-    return `${fmtMin}:${fmtSec}`;
-};
-
-const getEventStyle = (type) => {
-    const safeType = type ? type.toLowerCase() : 'info';
-    switch (safeType) {
-        case 'goal': return { bg: '#e8f5e9', text: '#2e7d32', border: '#2e7d32', label: 'GOAL' };
-        case 'foul': return { bg: '#ffebee', text: '#c62828', border: '#c62828', label: 'FOUL' };
-        case 'snitch': return { bg: '#fff8e1', text: '#f57f17', border: '#f57f17', label: 'SNITCH' };
-        default: return { bg: '#e3f2fd', text: '#1565c0', border: '#1565c0', label: 'INFO' };
-    }
-};
-
-const blinkingDot = {
-    width: 10, height: 10, borderRadius: '50%', bgcolor: '#ff1744',
-    boxShadow: '0 0 8px #ff1744', display: 'inline-block', mr: 1,
-    animation: 'pulse 1.5s infinite ease-in-out',
-    '@keyframes pulse': {
-        '0%': { opacity: 1, transform: 'scale(1)' },
-        '50%': { opacity: 0.4, transform: 'scale(1.2)' },
-        '100%': { opacity: 1, transform: 'scale(1)' },
-    },
+    const minutes = Math.floor(diffMs / 60000);
+    const seconds = Math.floor((diffMs % 60000) / 1000);
+    return `${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
 };
 
 const MatchDetail = () => {
@@ -85,159 +57,199 @@ const MatchDetail = () => {
     const initialMatch = location.state?.matchData || null;
     const [match, setMatch] = useState(initialMatch);
     const [loading, setLoading] = useState(!initialMatch);
-    const [displayTime, setDisplayTime] = useState(initialMatch ? initialMatch.time : "00:00");
+    const [displayTime, setDisplayTime] = useState("00:00");
 
     const fetchMatchData = useCallback(async () => {
         try {
             const data = await liveService.getMatchById(id);
             setMatch(data);
         } catch (err) {
-            console.warn("Backend unavailable, loading FULL mock data...");
-            if (MOCK_DATA[id]) {
-                setMatch(MOCK_DATA[id]);
-            }
+            console.warn("API Error, using mock data for demo...");
+            if (MOCK_DETAIL[id]) setMatch(MOCK_DETAIL[id]);
         } finally {
             setLoading(false);
         }
     }, [id]);
 
     useEffect(() => {
-        if (!initialMatch || !initialMatch.events) {
-            fetchMatchData();
-        }
+        if (!initialMatch || !initialMatch.events) fetchMatchData();
         const interval = setInterval(fetchMatchData, 10000);
         return () => clearInterval(interval);
     }, [fetchMatchData, initialMatch]);
 
+    // Timer Logic
     useEffect(() => {
-        if (!match || !match.schedule) return;
-        const updateTimer = () => {
-            const now = new Date();
-            const start = new Date(match.schedule);
-            if (now < start || match.status === 'SCHEDULED') {
-                setDisplayTime("UPCOMING");
-            } else if (match.status === 'FINISHED') {
-                setDisplayTime("FT");
+        if (!match?.schedule) return;
+        const timer = setInterval(() => {
+            // !!! GAME OVER LOGIC !!!
+            // If Snitch is caught, time stops. Game is over.
+            if (match.snitchCaughtBy) {
+                setDisplayTime("END");
             } else {
-                setDisplayTime(calculateElapsedTime(match.schedule));
+                const start = new Date(match.schedule).getTime();
+                const now = new Date().getTime();
+                const MAX_DURATION = 3 * 60 * 60 * 1000;
+
+                if (start <= now && (now - start) < MAX_DURATION) {
+                    setDisplayTime(calculateElapsedTime(match.schedule));
+                } else {
+                    setDisplayTime("FT"); // Full Time (Time limit reached)
+                }
             }
-        };
-        updateTimer();
-        const timerInterval = setInterval(updateTimer, 1000);
-        return () => clearInterval(timerInterval);
+        }, 1000);
+        return () => clearInterval(timer);
     }, [match]);
 
-    if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
-    if (!match) return <Container sx={{mt:5}}><Alert severity="warning">Match not found</Alert></Container>;
+    if (loading) return <div className="min-h-screen flex justify-center items-center text-blue-600 font-bold">Loading match data...</div>;
+    if (!match) return <div className="min-h-screen flex justify-center items-center font-bold text-slate-500">Match not found</div>;
 
-    const isLive = match.status === 'IN_PROGRESS' || (new Date() >= new Date(match.schedule) && match.status !== 'FINISHED');
+    const sortedEvents = match.events ? [...match.events].reverse() : [];
+    const isSnitchCaught = !!match.snitchCaughtBy;
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: '#f4f6f8', py: 4 }}>
-            <Container maxWidth="md">
-                <Button
+        <div className="min-h-screen bg-slate-50 py-8 px-4">
+            <div className="max-w-4xl mx-auto">
+                <button
                     onClick={() => navigate('/live')}
-                    sx={{ mb: 3, color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}
+                    className="mb-6 flex items-center text-slate-600 hover:text-blue-600 font-medium transition-colors"
                 >
-                    &larr; Back to all matches
-                </Button>
+                    <ChevronLeft className="w-5 h-5 mr-1" /> Back to Match Center
+                </button>
 
-                {/* --- MAIN CARD (IDENTICAL DESIGN TO LIVE MATCH) --- */}
-                <Paper
-                    elevation={3}
-                    sx={{
-                        width: '100%',
-                        mb: 4,
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                        background: '#ffffff'
-                    }}
-                >
-                    {/* Header (Same as LiveMatch) */}
-                    <Box sx={{ p: 2, borderBottom: '1px solid #f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box display="flex" alignItems="center">
-                            {isLive && <Box sx={blinkingDot} />}
-                            <Typography variant="caption" fontWeight="bold" color={isLive ? 'error' : 'text.secondary'} sx={{ letterSpacing: 1 }}>
-                                {isLive ? 'LIVE' : match.status} • {match.period || '-'}
-                            </Typography>
-                        </Box>
-                        <Typography variant="caption" color="text.secondary" fontWeight="medium">
-                            {match.stadium}
-                        </Typography>
-                    </Box>
+                {/* --- MAIN SCOREBOARD CARD --- */}
+                <div className={`w-full bg-white rounded-xl shadow-md overflow-hidden mb-8 border transition-all ${isSnitchCaught ? 'border-yellow-400 ring-1 ring-yellow-100' : 'border-slate-200'}`}>
 
-                    {/* Body (Same styling as LiveMatch) */}
-                    <Box sx={{ p: 4 }}>
-                        <Grid container alignItems="center" justifyContent="center">
-                            {/* HOME */}
-                            <Grid item xs={4} textAlign="center">
-                                <Avatar sx={{ width: 70, height: 70, mx: 'auto', mb: 2, bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 'bold', fontSize: '1.4rem' }}>
-                                    {match.homeTeam ? match.homeTeam.substring(0, 2).toUpperCase() : 'HT'}
-                                </Avatar>
-                                <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1 }}>
-                                    {match.homeTeam}
-                                </Typography>
-                            </Grid>
+                    {/* Header */}
+                    <div className="px-6 py-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                        <div className="flex items-center gap-2">
+                            {!isSnitchCaught ? (
+                                <>
+                                    <span className="relative flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                    </span>
+                                    <span className="text-xs font-bold text-red-600 tracking-wider uppercase">
+                                        LIVE • {match.period || 'In Progress'}
+                                    </span>
+                                </>
+                            ) : (
+                                // TROPHY ICON HERE
+                                <span className="text-xs font-black text-yellow-600 tracking-wider flex items-center gap-2 uppercase">
+                                    <Trophy className="w-4 h-4" /> Game Over • Snitch Caught
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{match.stadium}</span>
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-8">
+                        <div className="flex items-center justify-between">
+
+                            {/* HOME TEAM */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                                {/* GOLDEN SNITCH INDICATOR (HOME) */}
+                                {match.snitchCaughtBy === 'home' && (
+                                    <div className="absolute -top-12 flex flex-col items-center animate-bounce z-10">
+                                        <span className="bg-yellow-100 text-yellow-800 text-[10px] font-black px-2 py-0.5 rounded-full mb-1 border border-yellow-200 shadow-sm">+30 PTS</span>
+                                        <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-md" fill="currentColor" />
+                                    </div>
+                                )}
+                                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center text-2xl md:text-3xl font-black mb-4 shadow-inner border-2 ${match.snitchCaughtBy === 'home' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                                    {match.homeTeam.substring(0, 1).toUpperCase()}
+                                </div>
+                                <h3 className="text-lg md:text-2xl font-bold text-slate-900 text-center leading-tight uppercase italic">{match.homeTeam}</h3>
+                            </div>
 
                             {/* SCORE */}
-                            <Grid item xs={4} textAlign="center">
-                                <Typography variant="h2" fontWeight="900" sx={{ color: '#2d3436', letterSpacing: '-2px' }}>
+                            <div className="flex flex-col items-center px-4">
+                                <div className="text-6xl md:text-7xl font-black text-slate-900 tracking-tighter leading-none">
                                     {match.homeScore}-{match.awayScore}
-                                </Typography>
-                                <Typography variant="body2" color="error" fontWeight="bold" sx={{ mt: 1, fontFamily: 'monospace', fontSize: '1.2rem' }}>
+                                </div>
+                                <div className={`mt-2 font-mono font-bold text-2xl flex items-center gap-2 ${isSnitchCaught ? 'text-slate-400' : 'text-red-500'}`}>
+                                    {!isSnitchCaught && <Timer className="w-6 h-6" />}
                                     {displayTime}
-                                </Typography>
-                            </Grid>
+                                </div>
+                            </div>
 
-                            {/* AWAY */}
-                            <Grid item xs={4} textAlign="center">
-                                <Avatar sx={{ width: 70, height: 70, mx: 'auto', mb: 2, bgcolor: '#fce4ec', color: '#c2185b', fontWeight: 'bold', fontSize: '1.4rem' }}>
-                                    {match.awayTeam ? match.awayTeam.substring(0, 2).toUpperCase() : 'AT'}
-                                </Avatar>
-                                <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1 }}>
-                                    {match.awayTeam}
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                    {/* No Footer here because we have the commentary below */}
-                </Paper>
+                            {/* AWAY TEAM */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                                {/* GOLDEN SNITCH INDICATOR (AWAY) */}
+                                {match.snitchCaughtBy === 'away' && (
+                                    <div className="absolute -top-12 flex flex-col items-center animate-bounce z-10">
+                                        <span className="bg-yellow-100 text-yellow-800 text-[10px] font-black px-2 py-0.5 rounded-full mb-1 border border-yellow-200 shadow-sm">+30 PTS</span>
+                                        <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-md" fill="currentColor" />
+                                    </div>
+                                )}
+                                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center text-2xl md:text-3xl font-black mb-4 shadow-inner border-2 ${match.snitchCaughtBy === 'away' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'}`}>
+                                    {match.awayTeam.substring(0, 1).toUpperCase()}
+                                </div>
+                                <h3 className="text-lg md:text-2xl font-bold text-slate-900 text-center leading-tight uppercase italic">{match.awayTeam}</h3>
+                            </div>
+                        </div>
 
-                {/* --- COMMENTARY LIST --- */}
-                <Typography variant="h5" fontWeight="900" sx={{ mb: 3, color: '#1a1a1a' }}>Live Commentary</Typography>
-                <Box>
-                    {match.events && match.events.length > 0 ? (
-                        match.events.map((event, index) => {
-                            const style = getEventStyle(event.type);
+                        {/* GAME OVER BANNER */}
+                        {isSnitchCaught && (
+                            <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                                <div className="flex items-center gap-2 text-yellow-800 font-black text-lg uppercase tracking-widest mb-1">
+                                    <CheckCircle2 className="w-6 h-6" />
+                                    Snitch Caught by {match.snitchCaughtBy === 'home' ? match.homeTeam : match.awayTeam}
+                                </div>
+                                <p className="text-yellow-700 text-sm font-medium">30 points awarded. Match concluded.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* --- LIVE COMMENTARY --- */}
+                <h3 className="text-2xl font-black text-slate-900 mb-6 uppercase italic tracking-tighter flex items-center gap-2">
+                    Live <span className="text-blue-600">Commentary</span>
+                </h3>
+
+                <div className="space-y-3">
+                    {sortedEvents.length > 0 ? (
+                        sortedEvents.map((event, idx) => {
+                            const isSnitch = event.type === 'snitch';
+                            const isGoal = event.type === 'goal';
+                            const isFoul = event.type === 'foul';
+
+                            let cardStyle = "bg-white border-l-4 border-slate-300";
+                            let badgeStyle = "bg-slate-100 text-slate-600";
+
+                            if (isSnitch) {
+                                cardStyle = "bg-yellow-50 border-l-4 border-yellow-500";
+                                badgeStyle = "bg-yellow-200 text-yellow-900";
+                            } else if (isGoal) {
+                                cardStyle = "bg-white border-l-4 border-green-500";
+                                badgeStyle = "bg-green-100 text-green-700";
+                            } else if (isFoul) {
+                                cardStyle = "bg-white border-l-4 border-red-500";
+                                badgeStyle = "bg-red-100 text-red-700";
+                            }
+
                             return (
-                                <Paper key={index} elevation={0} sx={{
-                                    p: 2, mb: 2, borderRadius: 3, bgcolor: '#ffffff',
-                                    borderLeft: `6px solid ${style.border}`,
-                                    display: 'flex', alignItems: 'center',
-                                    transition: 'transform 0.1s', '&:hover': { transform: 'translateX(4px)' }
-                                }}>
-                                    <Typography variant="subtitle1" fontWeight="bold" sx={{ minWidth: 60, color: '#555' }}>
+                                <div key={idx} className={`p-4 rounded-lg shadow-sm flex items-start gap-4 transition-all hover:translate-x-1 ${cardStyle}`}>
+                                    <div className="font-mono font-bold text-slate-400 text-sm min-w-[3rem] text-right mt-1">
                                         {event.time}'
-                                    </Typography>
-                                    <Box sx={{
-                                        bgcolor: style.bg, color: style.text,
-                                        px: 1.5, py: 0.5, borderRadius: 1.5, mr: 2,
-                                        fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase'
-                                    }}>
-                                        {style.label}
-                                    </Box>
-                                    <Typography variant="body1" fontWeight="500" color="text.primary">
-                                        {event.text}
-                                    </Typography>
-                                </Paper>
+                                    </div>
+                                    <div className="flex-1">
+                                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider mb-1 ${badgeStyle}`}>
+                                            {event.type}
+                                        </span>
+                                        <p className="font-bold text-slate-800 text-base leading-snug">{event.text}</p>
+                                    </div>
+                                </div>
                             );
                         })
                     ) : (
-                        <Alert severity="info">No commentary available yet.</Alert>
+                        <div className="p-8 text-center text-slate-400 bg-white rounded-lg border border-slate-200 border-dashed">
+                            <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            No events recorded yet.
+                        </div>
                     )}
-                </Box>
-            </Container>
-        </Box>
+                </div>
+            </div>
+        </div>
     );
 };
 

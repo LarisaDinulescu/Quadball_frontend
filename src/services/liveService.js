@@ -1,14 +1,31 @@
 import api from "./api";
+import axios from 'axios';
 
 const MATCH_API_URL = "/matches";
 
 // http://localhost:8080/api/matches/{id}
-const getMatchById = (id) => api.get(`${MATCH_API_URL}/${id}`);
+const liveService = {
+    // Fetches live matches
+    getLiveMatches: async () => {
+        try {
+            const response = await api.get('/matches/live');
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching live matches:", error);
+            throw error;
+        }
+    },
 
-const getAllMatches = () => api.get(MATCH_API_URL);
-
-// export as an object
-export default {
-    getMatchById,
-    getAllMatches
+    // Fetches a specific match details
+    getMatchById: async (id) => {
+        try {
+            const response = await api.get(`/matches/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error fetching match ${id}:`, error);
+            throw error;
+        }
+    }
 };
+
+export default liveService;

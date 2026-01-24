@@ -1,210 +1,210 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Container, Typography, Grid, Paper, Avatar } from '@mui/material';
+import { Timer, Activity, Trophy } from 'lucide-react';
+import liveService from '../../services/liveService';
 
-// --- HELPER: TIME CALCULATOR ---
-const calculateElapsedTime = (startTimeStr, status) => {
+// --- TIME HELPER ---
+const calculateElapsedTime = (startTimeStr) => {
     if (!startTimeStr) return "00:00";
-    if (status === 'SCHEDULED') return "UPCOMING";
-    if (status === 'FINISHED') return "FT";
-
     const start = new Date(startTimeStr).getTime();
     const now = new Date().getTime();
-
     if (now < start) return "00:00";
-
     const diffMs = now - start;
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-
-    const fmtMin = minutes < 10 ? `0${minutes}` : minutes;
-    const fmtSec = seconds < 10 ? `0${seconds}` : seconds;
-
-    return `${fmtMin}:${fmtSec}`;
+    const minutes = Math.floor(diffMs / 60000);
+    const seconds = Math.floor((diffMs % 60000) / 1000);
+    return `${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
 };
 
-// --- MOCK DATA (WITH REAL SCHEDULES) ---
-// We create dates relative to NOW so the timer works immediately for demo
-const INITIAL_MATCHES = [
+// --- MOCK DATABASE (Contains EVERYTHING: Old, Live, Future) ---
+const MOCK_DATABASE = [
     {
-        id: 1,
-        homeTeam: "Milano Gators",
-        awayTeam: "Roma Centurions",
-        homeScore: 10,
-        awayScore: 10,
-        // Started 15 minutes and 30 seconds ago
-        schedule: new Date(Date.now() - (15 * 60 * 1000) - (30 * 1000)).toISOString(),
-        time: "00:00", // Will be calculated immediately
-        period: "1st Half",
-        stadium: "Arena Civica, Milano",
-        status: "IN_PROGRESS",
-        lastEvent: "Goal by Milano! (+10 pts)",
-        eventType: "goal"
+        id: 1, homeTeam: "Gryffindor", awayTeam: "Slytherin",
+        homeScore: 40, awayScore: 30,
+        // INIZIATA 15 MIN FA -> DEVE ESSERE SCARICATA
+        schedule: new Date(Date.now() - (15 * 60 * 1000)).toISOString(),
+        period: "1st Half", stadium: "Hogwarts Pitch",
+        snitchCaughtBy: null,
+        events: [
+            { time: "00:00", text: "Brooms Up!", type: "info" },
+            { time: "15:00", text: "Goal by Gryffindor!", type: "goal" }
+        ]
     },
     {
-        id: 2,
-        homeTeam: "Venezia Krakens",
-        awayTeam: "Firenze Lilies",
-        homeScore: 30,
-        awayScore: 10,
-        // Started 45 minutes ago
-        schedule: new Date(Date.now() - (45 * 60 * 1000)).toISOString(),
-        time: "00:00",
-        period: "2nd Half",
-        stadium: "Stadio Penzo, Venezia",
-        status: "IN_PROGRESS",
-        lastEvent: "Snitch caught by Seeker!",
-        eventType: "snitch"
+        id: 2, homeTeam: "Ravenclaw", awayTeam: "Hufflepuff",
+        homeScore: 150, awayScore: 160,
+        // FINITA 1 ORA FA (Rientra nelle 3 ore) -> DEVE ESSERE SCARICATA
+        schedule: new Date(Date.now() - (60 * 60 * 1000)).toISOString(),
+        period: "Finished", stadium: "Quidditch World Cup Stadium",
+        snitchCaughtBy: "away",
+        events: [{ time: "55:00", text: "SNITCH CAUGHT BY HUFFLEPUFF!", type: "snitch" }]
     },
     {
-        id: 3,
-        homeTeam: "Torino Minotaurs",
-        awayTeam: "Bologna Hippogriffs",
-        homeScore: 0,
-        awayScore: 0,
-        // Starts in 1 hour (Future)
-        schedule: new Date(Date.now() + (60 * 60 * 1000)).toISOString(),
-        time: "UPCOMING",
-        period: "-",
-        stadium: "Parco del Valentino, Torino",
-        status: "SCHEDULED",
-        lastEvent: "Match not started",
-        eventType: "info"
+        id: 3, homeTeam: "Bulgaria", awayTeam: "Ireland",
+        homeScore: 0, awayScore: 0,
+        // VECCHIA (Ieri) -> NON DEVE ESSERE SCARICATA
+        schedule: new Date(Date.now() - (24 * 60 * 60 * 1000)).toISOString(),
+        period: "Finished", stadium: "Top Box", snitchCaughtBy: "home", events: []
+    },
+    {
+        id: 4, homeTeam: "France", awayTeam: "Spain",
+        homeScore: 0, awayScore: 0,
+        // FUTURA (Tra 2 ore) -> NON DEVE ESSERE SCARICATA (ancora)
+        schedule: new Date(Date.now() + (120 * 60 * 1000)).toISOString(),
+        period: "-", stadium: "Beauxbatons", snitchCaughtBy: null, events: []
     }
 ];
 
-const getEventStyle = (type) => {
-    const safeType = type ? type.toLowerCase() : 'info';
-    switch (safeType) {
-        case 'goal': return { bg: '#e8f5e9', text: '#2e7d32', label: 'GOAL' };
-        case 'foul': return { bg: '#ffebee', text: '#c62828', label: 'FOUL' };
-        case 'snitch': return { bg: '#fff8e1', text: '#f57f17', label: 'SNITCH' };
-        default: return { bg: '#e3f2fd', text: '#1565c0', label: 'INFO' };
-    }
-};
-
-const blinkingDot = {
-    width: 10, height: 10, borderRadius: '50%', bgcolor: '#ff1744',
-    boxShadow: '0 0 8px #ff1744', display: 'inline-block', mr: 1,
-    animation: 'pulse 1.5s infinite ease-in-out',
-    '@keyframes pulse': {
-        '0%': { opacity: 1, transform: 'scale(1)' },
-        '50%': { opacity: 0.4, transform: 'scale(1.2)' },
-        '100%': { opacity: 1, transform: 'scale(1)' },
-    },
-};
-
 const MatchCard = ({ match }) => {
     const navigate = useNavigate();
-    const eventStyle = getEventStyle(match.eventType);
-    const isLive = match.status === 'IN_PROGRESS';
+    const latestEvent = match.events && match.events.length > 0
+        ? match.events[match.events.length - 1]
+        : { text: "No recent events", type: "info" };
+    const isSnitchCaught = !!match.snitchCaughtBy;
+
+    const getEventColor = (type) => {
+        switch (type) {
+            case 'goal': return 'bg-green-100 text-green-800 border-green-200';
+            case 'foul': return 'bg-red-100 text-red-800 border-red-200';
+            case 'snitch': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            default: return 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+    };
 
     return (
-        <Paper
+        <div
             onClick={() => navigate(`/live/${match.id}`, { state: { matchData: match } })}
-            elevation={3}
-            sx={{
-                width: '100%', mb: 3, borderRadius: 4, overflow: 'hidden', background: '#ffffff',
-                cursor: 'pointer', transition: 'transform 0.2s',
-                '&:hover': { transform: 'translateY(-4px)' }
-            }}
+            className={`w-full bg-white rounded-xl shadow-md overflow-hidden mb-6 cursor-pointer hover:shadow-xl transition-all duration-300 group border ${isSnitchCaught ? 'border-yellow-400 ring-1 ring-yellow-200' : 'border-slate-200 hover:border-blue-400'}`}
         >
-            <Box sx={{ p: 2, borderBottom: '1px solid #f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box display="flex" alignItems="center">
-                    {isLive && <Box sx={blinkingDot} />}
-                    <Typography variant="caption" fontWeight="bold" color={isLive ? 'error' : 'text.secondary'} sx={{ letterSpacing: 1 }}>
-                        {isLive ? 'LIVE' : match.status} • {match.period}
-                    </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary" fontWeight="medium">
-                    {match.stadium}
-                </Typography>
-            </Box>
+            <div className="px-6 py-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                    {!isSnitchCaught ? (
+                        <>
+                            <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                            </span>
+                            <span className="text-xs font-bold text-red-600 tracking-wider uppercase">LIVE • {match.period}</span>
+                        </>
+                    ) : (
+                        <span className="text-xs font-black text-yellow-600 tracking-wider flex items-center gap-2 uppercase">
+                            <Trophy className="w-4 h-4" /> Game Over • Snitch Caught
+                        </span>
+                    )}
+                </div>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{match.stadium}</span>
+            </div>
 
-            <Box sx={{ p: 4 }}>
-                <Grid container alignItems="center" justifyContent="center">
-                    <Grid item xs={4} textAlign="center">
-                        <Avatar sx={{ width: 70, height: 70, mx: 'auto', mb: 2, bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 'bold' }}>
-                            {match.homeTeam.substring(0, 2).toUpperCase()}
-                        </Avatar>
-                        <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1 }}>{match.homeTeam}</Typography>
-                    </Grid>
+            <div className="p-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-col items-center flex-1 relative">
+                        {match.snitchCaughtBy === 'home' && (
+                            <div className="absolute -top-5 animate-bounce z-10">
+                                <Trophy className="w-6 h-6 text-yellow-500 drop-shadow-sm" fill="currentColor" />
+                            </div>
+                        )}
+                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-xl md:text-2xl font-black mb-3 shadow-sm border-2 transition-transform group-hover:scale-105 ${match.snitchCaughtBy === 'home' ? 'bg-yellow-50 text-yellow-600 border-yellow-300' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                            {match.homeTeam.substring(0, 1).toUpperCase()}
+                        </div>
+                        <h3 className="text-lg md:text-xl font-bold text-slate-900 text-center leading-tight uppercase italic">{match.homeTeam}</h3>
+                    </div>
 
-                    <Grid item xs={4} textAlign="center">
-                        <Typography variant="h2" fontWeight="900" sx={{ color: '#2d3436', letterSpacing: '-2px' }}>
+                    <div className="flex flex-col items-center px-4">
+                        <div className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">
                             {match.homeScore}-{match.awayScore}
-                        </Typography>
-                        {/* CALCULATED TIMER */}
-                        <Typography variant="body2" color="error" fontWeight="bold" sx={{ mt: 1, fontFamily: 'monospace', fontSize: '1.2rem' }}>
-                            {match.time}
-                        </Typography>
-                    </Grid>
+                        </div>
+                        <div className={`mt-2 flex items-center gap-1 font-mono font-bold text-lg ${isSnitchCaught ? 'text-slate-400' : 'text-red-500'}`}>
+                            {!isSnitchCaught && <Timer className="w-4 h-4" />}
+                            {isSnitchCaught ? "FT" : match.time}
+                        </div>
+                    </div>
 
-                    <Grid item xs={4} textAlign="center">
-                        <Avatar sx={{ width: 70, height: 70, mx: 'auto', mb: 2, bgcolor: '#fce4ec', color: '#c2185b', fontWeight: 'bold' }}>
-                            {match.awayTeam.substring(0, 2).toUpperCase()}
-                        </Avatar>
-                        <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1 }}>{match.awayTeam}</Typography>
-                    </Grid>
-                </Grid>
-            </Box>
+                    <div className="flex flex-col items-center flex-1 relative">
+                        {match.snitchCaughtBy === 'away' && (
+                            <div className="absolute -top-5 animate-bounce z-10">
+                                <Trophy className="w-6 h-6 text-yellow-500 drop-shadow-sm" fill="currentColor" />
+                            </div>
+                        )}
+                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-xl md:text-2xl font-black mb-3 shadow-sm border-2 transition-transform group-hover:scale-105 ${match.snitchCaughtBy === 'away' ? 'bg-yellow-50 text-yellow-600 border-yellow-300' : 'bg-green-50 text-green-700 border-green-100'}`}>
+                            {match.awayTeam.substring(0, 1).toUpperCase()}
+                        </div>
+                        <h3 className="text-lg md:text-xl font-bold text-slate-900 text-center leading-tight uppercase italic">{match.awayTeam}</h3>
+                    </div>
+                </div>
+            </div>
 
-            <Box sx={{ bgcolor: eventStyle.bg, p: 2, borderTop: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="caption" fontWeight="900" sx={{ color: eventStyle.text, textTransform: 'uppercase', mr: 2, border: `1px solid ${eventStyle.text}`, px: 1, borderRadius: 1 }}>
-                    {eventStyle.label}
-                </Typography>
-                <Typography variant="body2" fontWeight="bold" sx={{ color: '#333' }}>
-                    {match.lastEvent}
-                </Typography>
-            </Box>
-        </Paper>
+            <div className={`px-6 py-2 flex items-center justify-center gap-2 border-t text-sm ${getEventColor(latestEvent.type)}`}>
+                <Activity className="w-4 h-4" />
+                <span className="font-bold uppercase text-xs">Latest:</span>
+                <span className="font-medium truncate">{latestEvent.text}</span>
+            </div>
+        </div>
     );
 };
 
 const LiveMatch = () => {
-    const [matches, setMatches] = useState(INITIAL_MATCHES);
+    // Stato iniziale vuoto (nessun dato finché non scarichiamo)
+    const [matches, setMatches] = useState([]);
 
-    // --- EFFECT: UPDATE TIMERS EVERY SECOND ---
+    const fetchMatches = async () => {
+        try {
+            // 1. Chiamiamo il backend. Ci aspettiamo che il backend ci dia SOLO le partite giuste.
+            const data = await liveService.getLiveMatches();
+            setMatches(data); // Usiamo direttamente i dati ricevuti
+
+        } catch (error) {
+            console.warn("Backend non raggiungibile. Simulo la query del backend sui dati Mock...");
+
+            // LOGICA DI SIMULAZIONE BACKEND (Solo per sviluppo)
+            // Filtriamo il MOCK_DATABASE per restituire solo quello che restituirebbe il server
+            const now = Date.now();
+            const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+
+            const simulatedBackendResponse = MOCK_DATABASE.filter(m => {
+                const start = new Date(m.schedule).getTime();
+
+                // La logica SQL sarebbe: WHERE start_time > (NOW - 3h) AND start_time <= NOW
+                const hasStarted = start <= now;
+                const isRelevant = (now - start) < THREE_HOURS_MS;
+
+                return hasStarted && isRelevant;
+            });
+
+            setMatches(simulatedBackendResponse);
+        }
+    };
+
     useEffect(() => {
-        // Function to update all matches
-        const updateAllTimers = () => {
-            setMatches(currentMatches =>
-                currentMatches.map(match => ({
-                    ...match,
-                    // Recalculate time based on schedule
-                    time: calculateElapsedTime(match.schedule, match.status)
-                }))
-            );
-        };
+        fetchMatches();
+        const pollInterval = setInterval(fetchMatches, 10000);
+        const timerInterval = setInterval(() => {
+            setMatches(current => current.map(m => ({ ...m, time: calculateElapsedTime(m.schedule) })));
+        }, 1000);
 
-        // Run immediately to avoid "00:00" flash
-        updateAllTimers();
-
-        // Run every second
-        const interval = setInterval(updateAllTimers, 1000);
-
-        return () => clearInterval(interval);
+        return () => { clearInterval(pollInterval); clearInterval(timerInterval); };
     }, []);
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: '#f4f6f8', py: 5 }}>
-            <Container maxWidth="md">
-                <Box mb={5} textAlign="center">
-                    <Typography variant="h4" fontWeight="900" color="#1a1a1a" letterSpacing="-1px">
-                        Match Center
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                        All live matches
-                    </Typography>
-                </Box>
-                <Box>
-                    {matches.map((match) => (
-                        <MatchCard key={match.id} match={match} />
-                    ))}
-                </Box>
-            </Container>
-        </Box>
+        <div className="min-h-screen bg-slate-50 p-8">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex justify-between items-center mb-10">
+                    <h1 className="text-4xl font-black italic uppercase tracking-tighter">
+                        Live <span className="text-blue-600">Match</span>
+                    </h1>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {matches.length > 0 ? (
+                        matches.map(match => <MatchCard key={match.id} match={match} />)
+                    ) : (
+                        <div className="col-span-full text-center py-20 bg-white rounded-xl shadow-md border border-slate-200">
+                            <Activity className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-slate-700">No live matches</h3>
+                            <p className="text-slate-400 mt-2">Matches appear here automatically when they start.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 };
 
