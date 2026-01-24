@@ -22,10 +22,12 @@ import Tournaments from './components/tournaments/Tournaments';
 import MatchReservation from './components/booking/MatchReservation';
 import ResetPassword from './components/auth/ResetPassword';
 import CreateTournament from './components/tournaments/CreateTournament';
+import MatchEditor from './components/tournaments/MatchEditor';
 import TeamsPage from "./components/teams/TeamsPage";
 import CreateTeam from "./components/teams/CreateTeam";
 import StadiumPage from "./components/stadiums/Stadium";
 import CreateStadium from "./components/stadiums/CreateStadium";
+import AdminReservations from './components/booking/AdminReservations';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -46,7 +48,6 @@ function App() {
     setUser(null);
   };
 
-  // --- INTERNAL NAVBAR COMPONENT ---
   const GlobalNavbar = () => {
     const navigate = useNavigate();
     return (
@@ -69,13 +70,10 @@ function App() {
 
           {user ? (
             <>
-              
               <Button color="inherit" component={Link} to="/dashboard">Profile</Button>
-              
               <Typography variant="body2" sx={{ ml: 2, mr: 2, fontStyle: 'italic', borderLeft: '1px solid white', pl: 2 }}>
                 {user.email}
               </Typography>
-              
               <Button variant="outlined" color="inherit" onClick={handleLogout} sx={{ borderColor: 'rgba(255,255,255,0.5)' }}>
                 Logout
               </Button>
@@ -104,8 +102,10 @@ function App() {
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/live" element={<LiveMatch />} />
-          {/* Dettaglio singola partita (NUOVO) */}
           <Route path="/live/:id" element={<MatchDetail />} />
+          <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/players" element={<PlayerManagement />} />
+          <Route path="/stadiums" element={<StadiumPage />} />
           
           <Route 
             path="/login" 
@@ -116,27 +116,26 @@ function App() {
             element={!user ? <Register onRegisterSuccess={(userData) => setUser(userData)} /> : <Navigate replace to="/dashboard" />} 
           />
 
-          {/* Protected Route: Dashboard (All logged-in users) */}
+          {/* Protected Routes */}
           <Route 
             path="/dashboard" 
             element={user ? <DashboardHome user={user} /> : <Navigate replace to="/login" />} 
           />
-          <Route path="/teams" element={<TeamsPage />} />
-
-          <Route path="/players" element={<PlayerManagement />} />
 
           <Route 
             path="/reservation" 
-            element={
-              user 
-                ? <MatchReservation /> 
-                : <Navigate replace to="/login" />
-            } 
+            element={user ? <MatchReservation /> : <Navigate replace to="/login" />} 
           />
 
-
-
-          <Route path="/stadiums" element={<StadiumPage />} />
+          {/* Admin / Manager Routes */}
+          <Route 
+            path="/admin/reservations" 
+            element={
+              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? <AdminReservations /> 
+                : <Navigate to="/dashboard" replace />
+            } 
+          />
 
           <Route 
             path="/stadiums/create" 
@@ -150,6 +149,7 @@ function App() {
                 : <Navigate replace to="/stadiums" />
             } 
           />
+
           <Route 
             path="/player/create" 
             element={
@@ -164,25 +164,19 @@ function App() {
           />
           
           <Route 
+            path="/tournaments/match/:matchId/edit" 
+            element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <MatchEditor /> : <Navigate to="/tournaments" />} 
+          />
+
+          <Route 
             path="/teams/create" 
-             element={
-               user?.role === 'ROLE_ORGANIZATION_MANAGER' 
-                ? <CreateTeam /> 
-                : <Navigate replace to="/tournaments" />
-            } />
+             element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <CreateTeam /> : <Navigate replace to="/tournaments" />} 
+          />
 
           <Route 
             path="/tournaments/create" 
-            element={
-              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
-                ? <CreateTournament /> 
-                : <Navigate replace to="/tournaments" />
-            } 
+            element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <CreateTournament /> : <Navigate replace to="/tournaments" />} 
           />
-
-          
-
-        
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -203,15 +197,6 @@ function DashboardHome({ user }) {
       </Paper>
       <Divider sx={{ my: 4 }}>YOUR PROFILE</Divider>
       <Profile user={user} />
-    </Container>
-  );
-}
-
-function PlayerManagementWrapper() {
-  return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}></Typography>
-      <PlayerManagement />
     </Container>
   );
 }

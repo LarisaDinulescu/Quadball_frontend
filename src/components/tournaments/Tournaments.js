@@ -34,7 +34,6 @@ const Tournaments = () => {
 }, []);
 //a qua
 
-
 //togli da qua 
   const handleSelectTournament = (id) => {
   setLoading(true);
@@ -59,23 +58,18 @@ const Tournaments = () => {
   //    });
   //};
 
-  // Funzione per gestire il click sul match e andare alla prenotazione
+  // Funzione per gestire il click sul match
   const handleMatchClick = (match) => {
-    if (!match.teamA || !match.teamB) return; // Evita prenotazioni per match TBD
+    if (!match.teamA || !match.teamB) return; 
 
-    // Passiamo i dati necessari alla pagina di prenotazione
-    navigate('/reservation', { 
-      state: { 
-        match: {
-          id: match.id,
-          teamA: match.teamA,
-          teamB: match.teamB,
-          date: match.date || "Scheduled",
-          stadiumName: match.stadiumName || "Arena Principal",
-          stadiumId: match.stadiumId
-        } 
-      } 
-    });
+    // SE È UN MANAGER -> Apri editing
+    if (isOrganizer) {
+      navigate(`/tournaments/match/${match.id}/edit`, { state: { match } });
+    } 
+    // SE È UN UTENTE NORMALE -> Prenota
+    else {
+      navigate('/reservation', { state: { match } });
+    }
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center font-bold text-blue-600">Loading...</div>;
@@ -163,7 +157,6 @@ const Tournaments = () => {
   );
 };
 
-// Componente MatchCard aggiornato con click per prenotazione
 const MatchCard = ({ match, onClick }) => {
   const isTBD = !match.teamA || !match.teamB;
 
@@ -191,7 +184,7 @@ const MatchCard = ({ match, onClick }) => {
 
         {!isTBD && (
           <p className="text-[10px] text-blue-500 font-bold uppercase tracking-tighter pt-1 text-center border-t border-slate-50">
-            Click to book seats
+            Click to manage/book
           </p>
         )}
       </CardContent>
@@ -219,6 +212,5 @@ const MOCK_BRACKET = [
   ]
 ];
 //a qua
-
 
 export default Tournaments;

@@ -41,6 +41,12 @@ const tournamentService = {
     }
   },
 
+    updateMatch: async (id, data) => {
+    const response = await api.put(`/matches/${id}`, data);
+    return response.data;
+    },
+
+
   /**
    * Deletes a tournament
    */
