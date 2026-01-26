@@ -1,5 +1,4 @@
 import api from "./api";
-import axios from 'axios';
 
 const MATCH_API_URL = "/matches";
 
