@@ -166,6 +166,19 @@ function App() {
                 : <Navigate replace to="/players" />
             } 
           />
+
+          <Route 
+            path="/official/create" 
+            element={
+              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+                ? (
+                  <Container maxWidth="sm" sx={{ mt: 8 }}>
+                    <PlayerForm />
+                  </Container>
+                )
+                : <Navigate replace to="/officials" />
+            } 
+          />
           
           <Route 
             path="/tournaments/match/:matchId/edit" 
