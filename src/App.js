@@ -16,6 +16,8 @@ import Register from './components/auth/Register';
 import Profile from './components/auth/Profile';
 import PlayerManagement from './components/players/PlayerManagement';
 import PlayerForm from "./components/players/PlayerForm";
+import OfficialForm from './components/matchOfficial/OfficialForm';
+import OfficialManagement from './components/matchOfficial/OfficialManagement';
 import LiveMatch from './components/live/LiveMatch';
 import MatchDetail from './components/live/MatchDetail';
 import Tournaments from './components/tournaments/Tournaments'; 
@@ -64,6 +66,7 @@ function App() {
           <Button color="inherit" component={Link} to="/">Home</Button>
           <Button color="inherit" component={Link} to="/teams">Teams</Button>
           <Button color="inherit" component={Link} to="/players"> Players </Button>
+          <Button color="inherit" component={Link} to="/officials">Officials</Button>
           <Button color="inherit" component={Link} to="/stadiums">Stadiums</Button>
           <Button color="inherit" component={Link} to="/tournaments">Tournaments</Button>
           <Button color="inherit" component={Link} to="/live">Live</Button>
@@ -105,6 +108,7 @@ function App() {
           <Route path="/live/:id" element={<MatchDetail />} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/players" element={<PlayerManagement />} />
+          <Route path="/officials" element={<OfficialManagement />} />
           <Route path="/stadiums" element={<StadiumPage />} />
           
           <Route 
