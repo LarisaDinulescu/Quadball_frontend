@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import stadiumService from "../../services/stadiumService"; // Usiamo il service!
+import stadiumService from "../../services/stadiumService"; 
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { ArrowLeft, MapPin, Calendar, Plus, Trash2, Trophy, Users } from "lucide-react";
-import CreateStadium from "./CreateStadium"; // Importa il tuo nuovo form
+import CreateStadium from "./CreateStadium"; 
 
 export default function StadiumPage() {
   const [stadiums, setStadiums] = useState([]);
@@ -13,7 +13,6 @@ export default function StadiumPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Controllo Ruolo Manager
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isManager = user?.role === 'ROLE_ORGANIZATION_MANAGER';
 
