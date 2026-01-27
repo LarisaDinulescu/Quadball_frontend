@@ -15,6 +15,8 @@ const OfficialForm = ({ initialData, onSuccess }) => {
   const [formData, setFormData] = useState({
     firstName: initialData?.firstName || "",
     lastName: initialData?.lastName || "",
+    email: initialData?.email || "",
+    phone: initialData?.phone || "",
     birthDate: initialData?.birthDate || "",
     role: initialData?.role || "",
   });
@@ -65,6 +67,31 @@ const OfficialForm = ({ initialData, onSuccess }) => {
             <Input name="lastName" value={formData.lastName} onChange={handleChange} required className="border-slate-200" />
           </div>
         </div>
+        {/* Riga per Email e Telefono */}
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label className="text-xs uppercase font-bold text-slate-500">Email</Label>
+                <Input
+                    name="email"
+                    type="email"
+                    placeholder="email@esempio.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="border-slate-200"
+                />
+            </div>
+            <div className="space-y-2">
+                <Label className="text-xs uppercase font-bold text-slate-500">Phone Number</Label>
+                <Input
+                    name="phone"
+                    type="tel"
+                    placeholder="+39..."
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="border-slate-200"
+                />
+            </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -76,15 +103,23 @@ const OfficialForm = ({ initialData, onSuccess }) => {
           <div className="space-y-2">
             <Label className="text-xs uppercase font-bold text-slate-500">Role</Label>
             <Select onValueChange={handleRoleChange} value={formData.role}>
-              <SelectTrigger className="border-slate-200">
-                <SelectValue placeholder="Select" />
+              <SelectTrigger className="border-slate-200 bg-white">
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="HEAD_REFEREE">Head Referee</SelectItem>
-                <SelectItem value="ASSISTANT_REFEREE">Assistant Referee</SelectItem>
-                <SelectItem value="SNAITCH_REFEREE">Snitch Referee</SelectItem>
-                <SelectItem value="GOAL_REFEREE">Goal Referee</SelectItem>
-              </SelectContent>
+                <SelectContent className="bg-white border border-slate-200 shadow-xl z-[100]">
+                    <SelectItem value="HEAD_REFEREE" className="focus:bg-slate-100 cursor-pointer">
+                        Head Referee
+                    </SelectItem>
+                    <SelectItem value="ASSISTANT_REFEREE" className="focus:bg-slate-100 cursor-pointer">
+                        Assistant Referee
+                    </SelectItem>
+                    <SelectItem value="SNAITCH_REFEREE" className="focus:bg-slate-100 cursor-pointer">
+                        Snitch Referee
+                    </SelectItem>
+                    <SelectItem value="GOAL_REFEREE" className="focus:bg-slate-100 cursor-pointer">
+                        Goal Referee
+                    </SelectItem>
+                </SelectContent>
             </Select>
           </div>
         </div>

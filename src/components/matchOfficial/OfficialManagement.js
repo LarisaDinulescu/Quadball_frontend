@@ -114,6 +114,12 @@ const OfficialManagement = () => {
                     <TableCell className="py-4 font-bold text-slate-900 uppercase tracking-tight">
                       {official.firstName} {official.lastName}
                     </TableCell>
+                    <TableCell className="py-4 font-bold text-slate-900 uppercase tracking-tight">
+                        {official.email}
+                    </TableCell>
+                    <TableCell className="py-4 font-bold text-slate-900 uppercase tracking-tight">
+                        {official.phone}
+                    </TableCell>
                     <TableCell className="py-4 text-center text-slate-500 font-medium">
                       <div className="flex items-center justify-center gap-2">
                         <CalendarDays size={14} className="text-slate-300" />

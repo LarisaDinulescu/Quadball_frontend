@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Trophy, Calendar, MapPin, ChevronLeft, Plus, Ticket } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import tournamentService from '../../services/tournamentService';
 
 const Tournaments = () => {
   const [tournaments, setTournaments] = useState([]); 
@@ -15,35 +15,61 @@ const Tournaments = () => {
   const user = JSON.parse(localStorage.getItem('user'));
   const isOrganizer = user?.role === 'ROLE_ORGANIZATION_MANAGER';
 
-  useEffect(() => {
-   /* axios.get('http://localhost:8080/api/tournaments')
-      .then(res => {
-        setTournaments(res.data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error fetching tournaments", err);
-        setLoading(false);
-      });
-  }, []);*/
-//togli da qua
-  setTournaments([
-    { id: 1, name: "Summer Quadball Cup", date: "2024-06-01", location: "Rome" }
-  ]);
-  setLoading(false);
-}, []);
-//a qua
+    useEffect(() => {
+        // SOSTITUITO: Chiamata reale al backend
+        const fetchTournaments = async () => {
+            try {
+                const data = await tournamentService.getAllTournaments();
+                setTournaments(data);
+            } catch (err) {
+                console.error("Error fetching tournaments", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTournaments();
+    }, []);
 
-//togli da qua 
-  const handleSelectTournament = (id) => {
-  setLoading(true);
-  // Simuliamo un ritardo del server di 500ms
-  setTimeout(() => {
-    setSelectedBracket(MOCK_BRACKET);
-    setLoading(false);
-  }, 500);
-};
-//a qua
+    const handleSelectTournament = async (id) => {
+        setLoading(true);
+        try {
+            // Nota: Il tuo backend ritorna i match con /tournaments/{id}/matches
+            const matches = await tournamentService.getTournamentMatches(id);
+
+            // Funzione per raggruppare i match in round per il bracket
+            const organizedBracket = organizeMatchesIntoRounds(matches);
+            setSelectedBracket(organizedBracket);
+        } catch (err) {
+            console.error("Error fetching matches", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // TO-DO: check if it's correct
+    // Helper per trasformare la lista piatta del backend in round per il frontend
+    /*const organizeMatchesIntoRounds = (matches) => {
+        // Se il tuo backend non divide già in round, qui puoi logica per separarli
+        // Per ora, mettiamoli tutti nel primo round come esempio
+        return [matches];
+    };*/
+    const organizeMatchesIntoRounds = (matches) => {
+        // matches è la lista di MatchTournamentEntity che arriva dal backend
+        const rounds = [];
+
+        matches.forEach(m => {
+            const rIndex = m.round; // Es: 0 per Ottavi, 1 per Quarti...
+            if (!rounds[rIndex]) rounds[rIndex] = [];
+            rounds[rIndex].push(m);
+        });
+
+        // Ordiniamo ogni round in base al bracketIndex per visualizzarli correttamente
+        rounds.forEach(round => {
+            round.sort((a, b) => a.bracketIndex - b.bracketIndex);
+        });
+
+        return rounds;
+    };
 
   //const handleSelectTournament = (id) => {
   //  setLoading(true);

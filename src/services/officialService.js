@@ -3,7 +3,7 @@ import api from "./api";
 const officialService = {
   getAllOfficials: async () => {
     try {
-      const response = await api.get("/api/officials");
+      const response = await api.get("/officials");
       return response.data;
     } catch (error) {
       console.error("Error fetching officials:", error);
@@ -13,7 +13,7 @@ const officialService = {
 
   getOfficialById: async (id) => {
     try {
-      const response = await api.get(`/api/officials/${id}`);
+      const response = await api.get(`/officials/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching official ${id}:`, error);
@@ -21,9 +21,10 @@ const officialService = {
     }
   },
 
+    // POST /officials
   createOfficial: async (officialData) => {
     try {
-      const response = await api.post("/api/officials", officialData);
+      const response = await api.post("/officials", officialData);
       return response.data;
     } catch (error) {
       console.error("Error creating official:", error.response?.data || error.message);
@@ -31,9 +32,11 @@ const officialService = {
     }
   },
 
+    // POST /officials/{id} (Update)
   updateOfficial: async (id, officialData) => {
     try {
-      const response = await api.post(`/api/officials/${id}`, officialData);
+      const payload = { ...officialData, id: id };
+      const response = await api.post(`/officials/${id}`, payload);
       return response.data;
     } catch (error) {
       console.error(`Error updating official ${id}:`, error);
@@ -41,9 +44,10 @@ const officialService = {
     }
   },
 
+    // DELETE /officials/{id}
   deleteOfficialById: async (id) => {
     try {
-      await api.delete(`/api/officials/${id}`);
+      await api.delete(`/officials/${id}`);
     } catch (error) {
       console.error(`Error deleting official ${id}:`, error);
       throw error;
