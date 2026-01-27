@@ -15,6 +15,16 @@ const reservationService = {
     }
   },
 
+    getReservationsById: async (id) => {
+        try {
+            const response = await api.get(`/reservations/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error fetching reservation ${id}:`, error);
+            throw error;
+        }
+    },
+
   /**
    * Retrieves reservations for a specific user by email
    * Used for the Spectator's profile page

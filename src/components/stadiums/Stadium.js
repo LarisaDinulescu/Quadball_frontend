@@ -34,7 +34,7 @@ export default function StadiumPage() {
 
   const loadStadiumDetails = async (id) => {
     try {
-      const data = await stadiumService.getStadiumDetails(id);
+      const data = await stadiumService.getStadiumsById(id);
       setSelectedStadium(data);
     } catch (err) {
       console.error("Error loading details", err);
