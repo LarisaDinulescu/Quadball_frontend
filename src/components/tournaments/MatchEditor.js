@@ -39,7 +39,7 @@ export default function MatchEditor() {
                 // 2. Se NON abbiamo i dati dal "location.state" (es. dopo refresh), li chiediamo al backend
                 if (!currentMatch) {
                     console.log("Dati persi al refresh, recupero dal server...");
-                    currentMatch = await tournamentService.getMatchDetails(matchId);
+                    currentMatch = await tournamentService.getMatchById(matchId);
                 }
 
                 // 3. Attendiamo gli stadi

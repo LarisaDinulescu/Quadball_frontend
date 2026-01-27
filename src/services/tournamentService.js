@@ -14,10 +14,20 @@ const tournamentService = {
     }
   },
 
+    getTournamentById: async (id) => {
+        try {
+            const response = await api.get(`/tournaments/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error fetching tournament ${id}:`, error);
+            throw error;
+        }
+    },
+
   /**
    * Retrieves the tournament bracket (list of lists of matches)
    */
-  getTournamentBracket: async (id) => {
+  /*getTournamentBracket: async (id) => {
     try {
       const response = await api.get(`/tournaments/${id}/bracket`);
       return response.data;
@@ -25,7 +35,7 @@ const tournamentService = {
       console.error(`Error fetching bracket for tournament ${id}:`, error);
       throw error;
     }
-  },
+  },*/
 
   /**
    * Creates a new tournament
@@ -65,7 +75,7 @@ const tournamentService = {
   },
 
 // GET /tournaments/{id}/teams (Ritorna la lista degli ID dei team)
-    getTournamentTeams: async (tournamentId) => {
+    getTeamsTorunamentId: async (tournamentId) => {
         try {
             const response = await api.get(`/tournaments/${tournamentId}/teams`);
             return response.data;
@@ -76,7 +86,7 @@ const tournamentService = {
     },
 
     // POST /tournaments/{tournamentId}/teams/{teamId}
-    addTeamToTournament: async (tournamentId, teamId) => {
+    addTeam: async (tournamentId, teamId) => {
         try {
             const response = await api.post(`/tournaments/${tournamentId}/teams/${teamId}`);
             return response.data;
@@ -87,7 +97,7 @@ const tournamentService = {
     },
 
     // DELETE /tournaments/{tournamentId}/teams/{teamId}
-    removeTeamFromTournament: async (tournamentId, teamId) => {
+    deleteTeamFromTournament: async (tournamentId, teamId) => {
         try{
             await api.delete(`/tournaments/${tournamentId}/teams/${teamId}`);
         }catch (error) {
@@ -99,7 +109,7 @@ const tournamentService = {
     // --- GESTIONE MATCH NEL TORNEO ---
 
     // GET /tournaments/{id}/matches
-    getTournamentMatches: async (tournamentId) => {
+    getMatchesTournamentId: async (tournamentId) => {
         try{
             const response = await api.get(`/tournaments/${tournamentId}/matches`);
             return response.data;
@@ -110,7 +120,7 @@ const tournamentService = {
     },
 
     // Recupera i dettagli tecnici di un match (punteggi, squadre, ecc)
-    getMatchDetails: async (matchId) => {
+    getMatchById: async (matchId) => {
         const response = await api.get(`/matches/${matchId}`);
         return response.data;
     },

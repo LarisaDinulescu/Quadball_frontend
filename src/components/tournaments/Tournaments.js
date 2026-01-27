@@ -34,7 +34,7 @@ const Tournaments = () => {
         setLoading(true);
         try {
             // Nota: Il tuo backend ritorna i match con /tournaments/{id}/matches
-            const matches = await tournamentService.getTournamentMatches(id);
+            const matches = await tournamentService.getMatchesTournamentId(id);
 
             // Funzione per raggruppare i match in round per il bracket
             const organizedBracket = organizeMatchesIntoRounds(matches);
