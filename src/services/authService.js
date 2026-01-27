@@ -3,20 +3,27 @@ import api from './api';
 const AUTH_URL = '/auth';
 
 /**
- * Register a new user
- * @param {Object} userData - {name, surname, email, password}
+ * Signs up a new user.
+ * Java: Long signUp(SignUpRequest signUpRequest);
+ * @param {Object} signUpRequest - {name, surname, email, password}
+ * @returns {Promise<number>} The ID of the newly created user
  */
-export const signup = async (userData) => {
-  return await api.post(`${AUTH_URL}/signup`, userData);
+export const signup = async (signUpRequest) => {
+  const response = await api.post(`${AUTH_URL}/signup`, signUpRequest);
+  return response.data; // Returns Long ID
 };
 
 /**
- * User login
- * Saves user data and token to localStorage
+ * Signs in a user and saves the session.
+ * Java: SignInResponse signIn(SignInRequest signInRequest);
+ * @param {string} email 
+ * @param {string} password 
+ * @returns {Promise<Object>} SignInResponse { accessToken, expiresIn, user }
  */
 export const login = async (email, password) => {
   const response = await api.post(`${AUTH_URL}/signin`, { email, password });
-  // Backend response: { accessToken, expiresIn, user: { id, email, name, surname, ruolo: [] } }
+  
+  // As per your SignInResponse: { accessToken, expiresIn, user }
   if (response.data.accessToken) {
     localStorage.setItem('user', JSON.stringify(response.data));
   }
@@ -24,56 +31,62 @@ export const login = async (email, password) => {
 };
 
 /**
- * Account activation via email token
+ * Activates a user account using a token from an email.
+ * Java: void activateUser(String token);
+ * @param {string} token 
  */
 export const activateAccount = async (token) => {
   return await api.get(`${AUTH_URL}/activate-account`, { params: { token } });
 };
 
 /**
- * Password recovery request
+ * Requests a password reset link.
+ * Java: void requestPasswordReset(String email);
+ * @param {string} email 
  */
 export const forgetPassword = async (email) => {
   return await api.get(`${AUTH_URL}/forget-password`, { params: { email } });
 };
 
 /**
- * Password reset with token
- * @param {Object} data - {token, newPassword, newPasswordConfirmation}
+ * Completes the password reset process.
+ * Java: void completePasswordReset(ResetPasswordRequest resetPasswordRequest);
+ * @param {Object} resetPasswordRequest - {token, newPassword, newPasswordConfirmation}
  */
-export const resetPassword = async (data) => {
-  return await api.post(`${AUTH_URL}/reset-password`, data);
+export const resetPassword = async (resetPasswordRequest) => {
+  return await api.post(`${AUTH_URL}/reset-password`, resetPasswordRequest);
 };
 
 /**
- * Logout
+ * Clears local session and redirects to login.
  */
 export const logout = () => {
   localStorage.removeItem('user');
   window.location.href = '/login'; 
 };
 
-// --- FRONTEND UTILS ---
+// --- FRONTEND UTILITIES ---
 
 /**
- * Retrieve current user data from storage
+ * Retrieves the complete stored session data.
  */
-export const getCurrentUser = () => {
+export const getSessionData = () => {
   const data = localStorage.getItem('user');
   return data ? JSON.parse(data) : null;
 };
 
 /**
- * Check if the user has one of the specified roles
- * Available roles: ROLE_ORGANIZATION_MANAGER, ROLE_TEAM_MANAGER, ROLE_SPECTATOR
- * @param {String|Array} requiredRoles - Required role or list of roles
+ * Checks if the user has any of the required roles.
+ * Supported: ROLE_ORGANIZATION_MANAGER, ROLE_TEAM_MANAGER, ROLE_SPECTATOR
+ * @param {string|string[]} requiredRoles 
  */
 export const hasRole = (requiredRoles) => {
-  const data = getCurrentUser();
-  // Matching your backend structure: data.user.ruolo
-  if (!data || !data.user || !data.user.ruolo) return false;
+  const session = getSessionData();
+  
+  // Based on your SignInResponse 'user' object and 'ruolo' list
+  if (!session || !session.user || !session.user.ruolo) return false;
   
   const rolesToCheck = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
   
-  return data.user.ruolo.some(role => rolesToCheck.includes(role));
+  return session.user.ruolo.some(role => rolesToCheck.includes(role));
 };

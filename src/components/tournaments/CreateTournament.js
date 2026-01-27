@@ -7,22 +7,23 @@ import { Label } from "../ui/label";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Trophy, Calendar, MapPin, ChevronLeft, Users, Check } from "lucide-react";
 import tournamentService from '../../services/tournamentService';
-import teamService from '../../services/teamService'; // Assicurati che esista
+import teamService from '../../services/teamService';
 
 const CreateTournament = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [teams, setTeams] = useState([]); // Tutte le squadre dal DB
-  const [selectedTeamIds, setSelectedTeamIds] = useState([]); // Squadre scelte
+  const [teams, setTeams] = useState([]); // All teams from DB
+  const [selectedTeamIds, setSelectedTeamIds] = useState([]); // Selected teams
   
   const [formData, setFormData] = useState({
     name: '',
     location: '',
-    date: '',
+    startDate: '',
+    endDate: '',
   });
 
-  // Carica i team al montaggio del componente
+  // Load teams on component mount
   useEffect(() => {
     const fetchTeams = async () => {
       try {
@@ -30,6 +31,7 @@ const CreateTournament = () => {
         setTeams(data);
       } catch (err) {
         console.error("Error fetching teams", err);
+        setError("Could not load teams. Please check your connection.");
       }
     };
     fetchTeams();
@@ -49,17 +51,28 @@ const CreateTournament = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation
     if (selectedTeamIds.length < 2) {
       setError("Please select at least 2 teams to generate a bracket.");
+      return;
+    }
+
+    if (new Date(formData.startDate) > new Date(formData.endDate)) {
+      setError("Start date cannot be after end date.");
       return;
     }
 
     setError('');
     setLoading(true);
 
+    // Payload aligned with backend requirements
     const payload = {
-      ...formData,
-      teamIds: selectedTeamIds // Inviamo la lista di ID al backend
+      name: formData.name,
+      location: formData.location,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      teamIds: selectedTeamIds 
     };
 
     try {
@@ -111,7 +124,7 @@ const CreateTournament = () => {
                   <Input 
                     id="name" name="name" required
                     value={formData.name} onChange={handleChange}
-                    className="pl-10" placeholder="e.g. European Quaffle Cup"
+                    className="pl-10" placeholder="e.g. European Quadball Cup"
                   />
                   <Trophy className="absolute left-3 top-2.5 text-slate-400" size={18} />
                 </div>
@@ -119,11 +132,11 @@ const CreateTournament = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="font-bold uppercase text-xs text-slate-500">Start Date</Label>
+                  <Label htmlFor="startDate" className="font-bold uppercase text-xs text-slate-500">Start Date</Label>
                   <div className="relative">
                     <Input 
-                      id="date" name="date" type="date" required
-                      value={formData.date} onChange={handleChange}
+                      id="startDate" name="startDate" type="date" required
+                      value={formData.startDate} onChange={handleChange}
                       className="pl-10"
                     />
                     <Calendar className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -131,15 +144,27 @@ const CreateTournament = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location" className="font-bold uppercase text-xs text-slate-500">General Location</Label>
+                  <Label htmlFor="endDate" className="font-bold uppercase text-xs text-slate-500">End Date</Label>
                   <div className="relative">
                     <Input 
-                      id="location" name="location" required
-                      value={formData.location} onChange={handleChange}
-                      className="pl-10" placeholder="City or Main Hub"
+                      id="endDate" name="endDate" type="date" required
+                      value={formData.endDate} onChange={handleChange}
+                      className="pl-10"
                     />
-                    <MapPin className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                    <Calendar className="absolute left-3 top-2.5 text-slate-400" size={18} />
                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location" className="font-bold uppercase text-xs text-slate-500">General Location</Label>
+                <div className="relative">
+                  <Input 
+                    id="location" name="location" required
+                    value={formData.location} onChange={handleChange}
+                    className="pl-10" placeholder="City or Main Hub"
+                  />
+                  <MapPin className="absolute left-3 top-2.5 text-slate-400" size={18} />
                 </div>
               </div>
             </div>
@@ -177,7 +202,7 @@ const CreateTournament = () => {
                     </div>
                   ))
                 ) : (
-                  <p className="col-span-2 text-center py-4 text-slate-400 text-sm">No teams found. Create teams first!</p>
+                  <p className="col-span-2 text-center py-4 text-slate-400 text-sm">No teams found. Please create teams first!</p>
                 )}
               </div>
             </div>

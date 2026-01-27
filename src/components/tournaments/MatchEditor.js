@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Save, ChevronLeft, Trophy, MapPin, Calendar, Loader2 } from "lucide-react";
+import { Save, ChevronLeft, MapPin, Calendar, Loader2, Trophy } from "lucide-react";
 import stadiumService from '../../services/stadiumService';
 import tournamentService from '../../services/tournamentService';
 
@@ -13,33 +13,48 @@ export default function MatchEditor() {
   const { matchId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // 'match' expected to contain: homeTeamId, awayTeamId, homeTeamName, awayTeamName, etc.
   const { match } = location.state || {};
 
   const [stadiums, setStadiums] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    scoreA: match?.scoreA || 0,
-    scoreB: match?.scoreB || 0,
+    homeScore: match?.homeScore || 0,
+    awayScore: match?.awayScore || 0,
     stadiumId: match?.stadiumId || "",
-    date: match?.date || ""
+    date: match?.date || "",
+    snitchCaughtByTeamId: match?.snitchCaughtByTeamId || ""
   });
 
   useEffect(() => {
-    // Carichiamo gli stadi per permettere al manager di scegliere dove si gioca
-    stadiumService.getAllStadiums().then(setStadiums).catch(console.error);
+    // Fetch stadiums to allow the manager to assign a venue
+    stadiumService.getAllStadiums()
+      .then(setStadiums)
+      .catch(err => console.error("Failed to load stadiums", err));
   }, []);
 
-  if (!match) return <div className="p-10 text-center">Match data not found.</div>;
+  if (!match) return <div className="p-10 text-center font-bold text-slate-500">Match data not found.</div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
+    // Formatting data for backend
+    const payload = {
+      ...formData,
+      homeScore: parseInt(formData.homeScore),
+      awayScore: parseInt(formData.awayScore),
+      stadiumId: formData.stadiumId ? parseInt(formData.stadiumId) : null,
+      snitchCaughtByTeamId: formData.snitchCaughtByTeamId ? parseInt(formData.snitchCaughtByTeamId) : null
+    };
+
     try {
-      // Chiamata al backend per aggiornare il match
-      await tournamentService.updateMatch(matchId, formData);
+      await tournamentService.updateMatch(matchId, payload);
       navigate('/tournaments');
     } catch (error) {
-      alert("Error updating match details.");
+      console.error(error);
+      alert("Error updating match details. Please verify your connection.");
     } finally {
       setLoading(false);
     }
@@ -50,18 +65,20 @@ export default function MatchEditor() {
       <Button 
         variant="ghost" 
         onClick={() => navigate('/tournaments')} 
-        className="mb-6 flex items-center gap-2 text-slate-600"
+        className="mb-6 flex items-center gap-2 text-slate-600 hover:text-blue-600"
       >
         <ChevronLeft size={20} /> Back to Bracket
       </Button>
 
-      <Card className="shadow-2xl border-t-4 border-t-blue-600 bg-white">
+      <Card className="shadow-2xl border-t-4 border-t-blue-600 bg-white overflow-hidden">
         <CardHeader className="text-center border-b bg-slate-50/50">
           <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Match Management</CardTitle>
           <div className="flex justify-between items-center mt-4 px-4">
-            <span className="text-xl font-bold uppercase italic">{match.teamA}</span>
-            <span className="text-blue-600 font-black italic text-2xl px-4">VS</span>
-            <span className="text-xl font-bold uppercase italic">{match.teamB}</span>
+            <span className="text-xl font-bold uppercase italic text-slate-700">{match.homeTeamName || 'Home Team'}</span>
+            <div className="flex flex-col items-center">
+                <span className="text-blue-600 font-black italic text-2xl px-4">VS</span>
+            </div>
+            <span className="text-xl font-bold uppercase italic text-slate-700">{match.awayTeamName || 'Away Team'}</span>
           </div>
         </CardHeader>
 
@@ -71,23 +88,43 @@ export default function MatchEditor() {
             {/* SCORE SECTION */}
             <div className="grid grid-cols-2 gap-8 py-6 bg-blue-50/50 rounded-xl px-4 border border-blue-100">
               <div className="space-y-2 text-center">
-                <Label className="font-bold text-xs uppercase text-slate-500">{match.teamA} Score</Label>
+                <Label className="font-bold text-xs uppercase text-slate-500">Home Score</Label>
                 <Input 
                   type="number" 
-                  className="text-center text-3xl font-black h-16 border-2 focus:ring-blue-600"
-                  value={formData.scoreA}
-                  onChange={(e) => setFormData({...formData, scoreA: e.target.value})}
+                  className="text-center text-3xl font-black h-16 border-2 focus:ring-blue-600 bg-white"
+                  value={formData.homeScore}
+                  onChange={(e) => setFormData({...formData, homeScore: e.target.value})}
                 />
               </div>
               <div className="space-y-2 text-center">
-                <Label className="font-bold text-xs uppercase text-slate-500">{match.teamB} Score</Label>
+                <Label className="font-bold text-xs uppercase text-slate-500">Away Score</Label>
                 <Input 
                   type="number" 
-                  className="text-center text-3xl font-black h-16 border-2 focus:ring-blue-600"
-                  value={formData.scoreB}
-                  onChange={(e) => setFormData({...formData, scoreB: e.target.value})}
+                  className="text-center text-3xl font-black h-16 border-2 focus:ring-blue-600 bg-white"
+                  value={formData.awayScore}
+                  onChange={(e) => setFormData({...formData, awayScore: e.target.value})}
                 />
               </div>
+            </div>
+
+            {/* QUADBALL SPECIFIC: SNITCH CAPTURE */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold text-xs uppercase text-slate-500">
+                <Trophy size={14} className="text-yellow-500" /> Snitch Caught By
+              </Label>
+              <Select 
+                onValueChange={(val) => setFormData({...formData, snitchCaughtByTeamId: val})}
+                value={formData.snitchCaughtByTeamId?.toString()}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select which team caught the snitch" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="none">No capture yet</SelectItem>
+                  <SelectItem value={match.homeTeamId?.toString()}>{match.homeTeamName}</SelectItem>
+                  <SelectItem value={match.awayTeamId?.toString()}>{match.awayTeamName}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* LOGISTICS SECTION */}
@@ -98,7 +135,7 @@ export default function MatchEditor() {
                 </Label>
                 <Select 
                   onValueChange={(val) => setFormData({...formData, stadiumId: val})}
-                  defaultValue={formData.stadiumId.toString()}
+                  value={formData.stadiumId?.toString()}
                 >
                   <SelectTrigger className="bg-white">
                     <SelectValue placeholder="Select Stadium" />
@@ -126,10 +163,10 @@ export default function MatchEditor() {
 
           </CardContent>
 
-          <CardFooter className="bg-slate-900 p-6 rounded-b-lg">
+          <CardFooter className="bg-slate-900 p-6">
             <Button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-500 py-6 text-lg font-bold"
+              className="w-full bg-blue-600 hover:bg-blue-500 py-6 text-lg font-bold text-white transition-colors"
               disabled={loading}
             >
               {loading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}

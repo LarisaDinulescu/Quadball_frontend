@@ -12,6 +12,7 @@ import { Box, Container, Typography, Paper, Divider, AppBar, Toolbar, Button } f
 // Importing your components
 import Home from './components/Home'; 
 import Login from './components/auth/Login'; 
+import ActivationPage from './components/auth/ActivationPage'; 
 import Register from './components/auth/Register'; 
 import Profile from './components/auth/Profile';
 import PlayerManagement from './components/players/PlayerManagement';
@@ -22,7 +23,6 @@ import LiveMatch from './components/live/LiveMatch';
 import MatchDetail from './components/live/MatchDetail';
 import Tournaments from './components/tournaments/Tournaments'; 
 import MatchReservation from './components/booking/MatchReservation';
-import ResetPassword from './components/auth/ResetPassword';
 import CreateTournament from './components/tournaments/CreateTournament';
 import MatchEditor from './components/tournaments/MatchEditor';
 import TeamsPage from "./components/teams/TeamsPage";
@@ -30,6 +30,8 @@ import CreateTeam from "./components/teams/CreateTeam";
 import StadiumPage from "./components/stadiums/Stadium";
 import CreateStadium from "./components/stadiums/CreateStadium";
 import AdminReservations from './components/booking/AdminReservations';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -110,6 +112,10 @@ function App() {
           <Route path="/players" element={<PlayerManagement />} />
           <Route path="/officials" element={<OfficialManagement />} />
           <Route path="/stadiums" element={<StadiumPage />} />
+          <Route path="/activate-account" element={<ResetPassword />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
           
           <Route 
             path="/login" 

@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-// Importa il servizio che abbiamo creato
+import { useNavigate } from 'react-router-dom'; // 1. Importa useNavigate
 import { login } from '../../services/authService'; 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
 
-const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
+const Login = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(''); 
+  
+  const navigate = useNavigate(); // 2. Inizializza navigate
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,20 +19,13 @@ const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
     setIsLoading(true);
 
     try {
-      // Usiamo il servizio reale
       const data = await login(email, password);
-      
-      // Il servizio salva già l'utente nel localStorage
-      // Passiamo i dati al componente genitore
       onLoginSuccess(data);
-
+      navigate('/tournaments'); // 3. Dopo il login, vai alla lista tornei
     } catch (err) {
       console.error("Login failed:", err);
-      // Gestione errori più precisa
       const message = err.response?.data?.message || "Invalid credentials. Please try again.";
       setError(message);
-      
-      
     } finally {
       setIsLoading(false);
     }
@@ -90,20 +84,22 @@ const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
             </Button>
             
             <div className="flex flex-col items-center gap-2">
-               <Button 
+              {/* 4. Collegamento a Forgot Password */}
+              <Button 
                 variant="link" 
                 className="text-xs text-slate-500"
                 type="button"
-                onClick={() => {/* logica forget password */}}
+                onClick={() => navigate('/forgot-password')}
               >
                 Forgot your password?
               </Button>
               
+              {/* 5. Collegamento a Register */}
               <Button 
                 variant="ghost" 
                 className="w-full text-sm font-semibold text-slate-600 underline"
                 type="button"
-                onClick={onSwitchToRegister}
+                onClick={() => navigate('/register')}
               >
                 New here? Create an account
               </Button>
