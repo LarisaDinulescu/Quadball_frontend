@@ -25,7 +25,9 @@ export const login = async (email, password) => {
   
   // As per your SignInResponse: { accessToken, expiresIn, user }
   if (response.data.accessToken) {
-    localStorage.setItem('user', JSON.stringify(response.data));
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+    localStorage.setItem('token', response.data.accessToken);
+
   }
   return response.data;
 };
@@ -62,6 +64,7 @@ export const resetPassword = async (resetPasswordRequest) => {
  */
 export const logout = () => {
   localStorage.removeItem('user');
+  localStorage.removeItem('token');
   window.location.href = '/login'; 
 };
 
@@ -81,12 +84,12 @@ export const getSessionData = () => {
  * @param {string|string[]} requiredRoles 
  */
 export const hasRole = (requiredRoles) => {
-  const session = getSessionData();
+  const user = getSessionData();
   
-  // Based on your SignInResponse 'user' object and 'ruolo' list
-  if (!session || !session.user || !session.user.ruolo) return false;
+  // Based on your SignInResponse 'user' object and 'rules' list
+  if (!user || !user.roles) return false;
   
   const rolesToCheck = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
   
-  return session.user.ruolo.some(role => rolesToCheck.includes(role));
+  return user.roles.some(role => rolesToCheck.includes(role));
 };

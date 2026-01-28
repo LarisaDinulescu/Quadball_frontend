@@ -20,7 +20,7 @@ const Login = ({ onLoginSuccess }) => {
 
     try {
       const data = await login(email, password);
-      onLoginSuccess(data);
+      onLoginSuccess(data.user);
       navigate('/tournaments'); // 3. Dopo il login, vai alla lista tornei
     } catch (err) {
       console.error("Login failed:", err);

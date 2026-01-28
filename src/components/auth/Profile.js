@@ -8,7 +8,7 @@ import reservationService from '../../services/reservationService';
 const Profile = ({ user }) => {
   const navigate = useNavigate();
   const [myReservations, setMyReservations] = useState([]);
-  const isManager = user?.role === 'ROLE_ORGANIZATION_MANAGER';
+  const isManager = user?.roles?.includes === 'ROLE_ORGANIZATION_MANAGER';
 
   useEffect(() => {
     // Only fetch personal reservations if the user is not a manager 
@@ -34,7 +34,7 @@ const Profile = ({ user }) => {
             </h1>
             <p className="text-slate-500 flex items-center gap-1">
               <ShieldCheck size={16} className="text-blue-600" />
-              Role: <span className="font-semibold text-blue-600">{user.role || 'Not specified'}</span>
+              Role: <span className="font-semibold text-blue-600">{user.roles ? user.roles[0].replace('ROLE_', '').replace('_', ' ') : 'Not specified'}</span>
             </p>
           </div>
         </div>
