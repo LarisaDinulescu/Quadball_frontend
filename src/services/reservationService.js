@@ -3,7 +3,7 @@ import api from './api';
 const reservationService = {
   /**
    * Retrieves all reservations from the database
-   * Typically used by ROLE_ORGANIZATION_MANAGER
+   * Used only by ROLE_ORGANIZATION_MANAGER
    */
   getAllReservations: async () => {
     try {

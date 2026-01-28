@@ -12,6 +12,7 @@ const OfficialForm = ({ initialData, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // @todo: add in the update function fields email and phone in the backend
   const [formData, setFormData] = useState({
     firstName: initialData?.firstName || "",
     lastName: initialData?.lastName || "",

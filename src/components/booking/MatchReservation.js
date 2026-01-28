@@ -22,9 +22,10 @@ export default function MatchReservation() {
     try {
       const user = JSON.parse(localStorage.getItem('user'));
       const data = {
+        userId: user.id,
         matchId: match.id,
-        spectatorEmail: user.email,
-        seatCount: seatCount,
+        // spectatorEmail: user.email,
+        seatCount: parseInt(seatCount),
         stadiumId: match.stadiumId
       };
       
