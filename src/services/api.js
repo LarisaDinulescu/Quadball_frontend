@@ -9,26 +9,25 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const user = JSON.parse(userData);
-      // Usiamo solo accessToken come da risposta del backend
-      if (user?.accessToken) {
-        config.headers.Authorization = `Bearer ${user.accessToken}`;
-      }
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Opzionale: Interceptor per gestire token scaduti
+// Interceptor per gestire errori di risposta (es. token scaduto)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Pulizia totale in caso di sessione scaduta
       localStorage.removeItem('user');
-      // Qui potresti anche forzare un redirect alla /login
+      localStorage.removeItem('token');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

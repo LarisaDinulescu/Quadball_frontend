@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 
 import officialService from "../../services/officialService";
+import { hasRole } from "../../services/authService";
 import OfficialForm from "./OfficialForm"; 
 
 const OfficialManagement = () => {
@@ -14,8 +15,7 @@ const OfficialManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedOfficial, setSelectedOfficial] = useState(null);
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const isManager = user?.role === 'ROLE_ORGANIZATION_MANAGER';
+  const isManager = hasRole('ROLE_ORGANIZATION_MANAGER');
 
   const fetchOfficials = async () => {
     try {
@@ -103,6 +103,7 @@ const OfficialManagement = () => {
               <TableHeader className="bg-slate-50 border-b">
                 <TableRow>
                   <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12">Official Name</TableHead>
+                  <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12">Contact Info</TableHead>
                   <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12 text-center">Birth Date</TableHead>
                   <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12 text-center">Role</TableHead>
                   {isManager && <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12 text-right pr-8">Actions</TableHead>}
@@ -115,11 +116,8 @@ const OfficialManagement = () => {
                       {official.firstName} {official.lastName}
                     </TableCell>
                     <TableCell className="py-4 font-bold text-slate-900 uppercase tracking-tight">
-                        {official.email}
-                    </TableCell>
-                    <TableCell className="py-4 font-bold text-slate-900 uppercase tracking-tight">
-                        {official.phone}
-                    </TableCell>
+                        {official.email} {official.phone}
+                    </TableCell>     
                     <TableCell className="py-4 text-center text-slate-500 font-medium">
                       <div className="flex items-center justify-center gap-2">
                         <CalendarDays size={14} className="text-slate-300" />
