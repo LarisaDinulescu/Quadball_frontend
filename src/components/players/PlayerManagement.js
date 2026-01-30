@@ -4,7 +4,9 @@ import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+
 import playerService from "../../services/playerService";
+import { hasRole } from "../../services/authService";
 import PlayerForm from "./PlayerForm"; 
 
 const PlayerManagement = () => {
@@ -13,10 +15,8 @@ const PlayerManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
-  // --- CONTROLLO RUOLO ---
-  // Recuperiamo l'utente dal localStorage. Se non c'è, restituiamo un oggetto vuoto.
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const isManager = user?.role === 'ROLE_ORGANIZATION_MANAGER';
+  // Controllo permessi centralizzato
+  const canEdit = hasRole('ROLE_ORGANIZATION_MANAGER') || hasRole('ROLE_TEAM_MANAGER');
 
   const fetchPlayers = async () => {
     try {
@@ -54,26 +54,29 @@ const PlayerManagement = () => {
   return (
     <div className="space-y-6 bg-slate-50 min-h-screen p-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">
-          Players
-        </h2>
+        <div>
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">
+            Players
+          </h2>
+          <p className="text-slate-500 text-sm font-medium">Athlete & Roster Management</p>
+        </div>
         
-        {/* BOTTONE VISIBILE SOLO AL MANAGER */}
-        {isManager && (
+        {/* Pulsante uniformato a quello degli Officials */}
+        {canEdit && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) setSelectedPlayer(null);
           }}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 gap-2 shadow-lg font-bold px-6">
-                <Plus size={20} /> Add New Player
+              <Button className="bg-indigo-600 hover:bg-indigo-700 gap-2 shadow-lg font-bold px-6 text-white">
+                <Plus size={20} /> Add Player
               </Button>
             </DialogTrigger>
             
-            <DialogContent className="sm:max-w-[500px] bg-white border-none shadow-2xl opacity-100">
+            <DialogContent className="sm:max-w-[500px] bg-white border-none shadow-2xl">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold">
-                  {selectedPlayer ? "Edit Player" : "Create New Player"}
+                <DialogTitle className="text-2xl font-bold text-indigo-900">
+                  {selectedPlayer ? "Edit Player" : "Register New Player"}
                 </DialogTitle>
               </DialogHeader>
               <PlayerForm 
@@ -89,15 +92,13 @@ const PlayerManagement = () => {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3">
-              <Loader2 className="animate-spin text-blue-600" size={48} />
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-sm text-center">
-                Loading Roster...
-              </p>
+              <Loader2 className="animate-spin text-indigo-600" size={48} />
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Loading Roster...</p>
             </div>
           ) : players.length === 0 ? (
             <div className="text-center py-24">
               <Users size={48} className="mx-auto text-slate-200 mb-4" />
-              <p className="text-slate-400 text-lg font-medium text-center">No players registered yet.</p>
+              <p className="text-slate-400 text-lg font-medium">No players registered yet.</p>
             </div>
           ) : (
             <Table>
@@ -106,18 +107,17 @@ const PlayerManagement = () => {
                   <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12">Full Name</TableHead>
                   <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12 text-center">Position</TableHead>
                   <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12 text-center">Jersey #</TableHead>
-                  {/* Mostriamo la colonna azioni solo se è un manager */}
-                  {isManager && <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12 text-right pr-8">Actions</TableHead>}
+                  {canEdit && <TableHead className="font-bold text-slate-700 uppercase text-xs tracking-wider h-12 text-right pr-8">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {players.map((player) => (
-                  <TableRow key={player.id} className="hover:bg-blue-50/50 transition-colors group border-b last:border-0">
-                    <TableCell className="py-4 font-bold text-slate-900">
-                      {player.firstName} {player.lastName}
+                  <TableRow key={player.id} className="hover:bg-indigo-50/30 transition-colors border-b last:border-0">
+                    <TableCell className="py-4 font-bold text-slate-900 uppercase tracking-tight">
+                      {player.name}
                     </TableCell>
                     <TableCell className="py-4 text-center">
-                      <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest border border-blue-200 inline-block">
+                      <span className="px-3 py-1 rounded bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-widest border border-blue-100 inline-block">
                         {player.position}
                       </span>
                     </TableCell>
@@ -125,14 +125,13 @@ const PlayerManagement = () => {
                       {player.jerseyNumber ? `#${player.jerseyNumber}` : "--"}
                     </TableCell>
                     
-                    {/* AZIONI VISIBILI SOLO AL MANAGER */}
-                    {isManager && (
+                    {canEdit && (
                       <TableCell className="py-4 text-right pr-8">
                         <div className="flex justify-end gap-1">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                            className="text-slate-400 hover:text-indigo-600"
                             onClick={() => {
                               setSelectedPlayer(player);
                               setIsDialogOpen(true);
@@ -143,7 +142,7 @@ const PlayerManagement = () => {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                            className="text-slate-400 hover:text-red-600"
                             onClick={() => handleDelete(player.id)}
                           >
                             <Trash2 size={18} />
