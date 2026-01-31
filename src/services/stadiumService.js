@@ -42,14 +42,14 @@ const stadiumService = {
     }
   },
 
-    updateStadium: async (stadiumData, id) => {
+    updateStadium: async (id, stadiumData) => {
         try {
             const response = await api.put(`/stadium/${id}`, stadiumData);
             return response.data;
         } catch (error) {
             console.error(`Error updating stadium ${id}:`, error);
             throw error;
-        }
+      }
     },
 
   /**
