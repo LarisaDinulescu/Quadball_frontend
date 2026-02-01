@@ -26,9 +26,10 @@ import MatchReservation from './components/booking/MatchReservation';
 import CreateTournament from './components/tournaments/CreateTournament';
 import MatchEditor from './components/tournaments/MatchEditor';
 import TeamsPage from "./components/teams/TeamsPage";
+import TeamDetail from "./components/teams/TeamDetail";
 import CreateTeam from "./components/teams/CreateTeam";
-import StadiumPage from "./components/stadiums/Stadium";
-import CreateStadium from "./components/stadiums/CreateStadium";
+import StadiumPage from "./components/stadiums/StadiumManagement";
+import CreateStadium from "./components/stadiums/StadiumForm";
 import AdminReservations from './components/booking/AdminReservations';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
@@ -50,6 +51,11 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('user');
     setUser(null);
+  };
+
+  const hasRequiredRole = (requiredRole) => {
+    if (!user || !user.roles) return false;
+    return user.roles.includes(requiredRole);
   };
 
   const GlobalNavbar = () => {
@@ -109,6 +115,7 @@ function App() {
           <Route path="/live" element={<LiveMatch />} />
           <Route path="/live/:id" element={<MatchDetail />} />
           <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/teams/:id" element={<TeamDetail />} />
           <Route path="/players" element={<PlayerManagement />} />
           <Route path="/officials" element={<OfficialManagement />} />
           <Route path="/stadiums" element={<StadiumPage />} />
@@ -141,7 +148,7 @@ function App() {
           <Route 
             path="/admin/reservations" 
             element={
-              user?.role === 'ROLE_ORGANIZATION_MANAGER' 
+              hasRequiredRole('ROLE_ORGANIZATION_MANAGER') 
                 ? <AdminReservations /> 
                 : <Navigate to="/dashboard" replace />
             } 
@@ -188,12 +195,18 @@ function App() {
           
           <Route 
             path="/tournaments/match/:matchId/edit" 
-            element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <MatchEditor /> : <Navigate to="/tournaments" />} 
+            element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <MatchEditor /> : <Navigate to="/match" />} 
           />
 
           <Route 
             path="/teams/create" 
-             element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <CreateTeam /> : <Navigate replace to="/tournaments" />} 
+            element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <CreateTeam /> : <Navigate replace to="/teams" />} 
+          />
+
+          <Route 
+            path="/teams/edit/:id" 
+            element={
+              hasRequiredRole('ROLE_ORGANIZATION_MANAGER') || hasRequiredRole('ROLE_TEAM_MANAGER') ? <CreateTeam /> : <Navigate replace to="/teams" />} 
           />
 
           <Route 
