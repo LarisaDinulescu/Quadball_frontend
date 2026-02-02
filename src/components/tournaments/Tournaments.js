@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Trophy, Calendar, MapPin, ChevronLeft, Plus, Ticket } from "lucide-react";
+import { Trophy, Calendar, MapPin, ChevronLeft, Plus, Ticket, Trash2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import tournamentService from '../../services/tournamentService';
 
@@ -13,7 +13,9 @@ const Tournaments = () => {
 
   // Get user data from localStorage to check roles
   const user = JSON.parse(localStorage.getItem('user'));
-  const isOrganizer = user?.role === 'ROLE_ORGANIZATION_MANAGER';
+  
+  // MODIFICA: Controllo coerenza con app.js (usa .roles array invece di .role string)
+  const isOrganizer = user?.roles?.includes('ROLE_ORGANIZATION_MANAGER');
 
     useEffect(() => {
         // SOSTITUITO: Chiamata reale al backend
@@ -29,6 +31,19 @@ const Tournaments = () => {
         };
         fetchTournaments();
     }, []);
+
+    const handleDeleteTournament = async (e, id) => {
+        e.stopPropagation(); // Evita che il click apra il bracket
+        if (window.confirm("Sei sicuro di voler eliminare questo torneo e tutti i match associati?")) {
+            try {
+                await tournamentService.deleteTournament(id);
+                setTournaments(tournaments.filter(t => t.id !== id));
+            } catch (err) {
+                console.error("Error deleting tournament", err);
+                alert("Impossibile eliminare il torneo. Riprova più tardi.");
+            }
+        }
+    };
 
     const handleSelectTournament = async (id) => {
         setLoading(true);
@@ -46,24 +61,16 @@ const Tournaments = () => {
         }
     };
 
-    // TO-DO: check if it's correct
-    // Helper per trasformare la lista piatta del backend in round per il frontend
-    /*const organizeMatchesIntoRounds = (matches) => {
-        // Se il tuo backend non divide già in round, qui puoi logica per separarli
-        // Per ora, mettiamoli tutti nel primo round come esempio
-        return [matches];
-    };*/
     const organizeMatchesIntoRounds = (matches) => {
-        // matches è la lista di MatchTournamentEntity che arriva dal backend
         const rounds = [];
+        if (!matches || matches.length === 0) return [];
 
         matches.forEach(m => {
-            const rIndex = m.round; // Es: 0 per Ottavi, 1 per Quarti...
+            const rIndex = m.round;
             if (!rounds[rIndex]) rounds[rIndex] = [];
             rounds[rIndex].push(m);
         });
 
-        // Ordiniamo ogni round in base al bracketIndex per visualizzarli correttamente
         rounds.forEach(round => {
             round.sort((a, b) => a.bracketIndex - b.bracketIndex);
         });
@@ -71,28 +78,12 @@ const Tournaments = () => {
         return rounds;
     };
 
-  //const handleSelectTournament = (id) => {
-  //  setLoading(true);
-  //  axios.get(`http://localhost:8080/api/tournaments/${id}/bracket`)
-  //    .then(res => {
-  //      setSelectedBracket(res.data);
-  //      setLoading(false);
-  //    })
-  //    .catch(err => {
-  //      console.error("Error fetching bracket", err);
-  //      setLoading(false);
-  //    });
-  //};
-
-  // Funzione per gestire il click sul match
   const handleMatchClick = (match) => {
     if (!match.teamA || !match.teamB) return; 
 
-    // SE È UN MANAGER -> Apri editing
     if (isOrganizer) {
       navigate(`/tournaments/match/${match.id}/edit`, { state: { match } });
     } 
-    // SE È UN UTENTE NORMALE -> Prenota
     else {
       navigate('/reservation', { state: { match } });
     }
@@ -119,20 +110,26 @@ const Tournaments = () => {
             </h1>
 
             <div className="flex gap-12 overflow-x-auto pb-10 custom-scrollbar">
-              {selectedBracket.map((roundMatches, roundIndex) => (
-                <div key={roundIndex} className="flex flex-col justify-around gap-8 min-w-[250px]">
-                  <h3 className="text-center font-bold text-slate-400 uppercase text-xs tracking-widest border-b pb-2">
-                    {getRoundName(roundIndex, selectedBracket.length)}
-                  </h3>
-                  {roundMatches.map((match, mIdx) => (
-                    <MatchCard 
-                      key={mIdx} 
-                      match={match} 
-                      onClick={() => handleMatchClick(match)} 
-                    />
-                  ))}
+              {selectedBracket.length > 0 ? (
+                selectedBracket.map((roundMatches, roundIndex) => (
+                  <div key={roundIndex} className="flex flex-col justify-around gap-8 min-w-[250px]">
+                    <h3 className="text-center font-bold text-slate-400 uppercase text-xs tracking-widest border-b pb-2">
+                      {getRoundName(roundIndex, selectedBracket.length)}
+                    </h3>
+                    {roundMatches.map((match, mIdx) => (
+                      <MatchCard 
+                        key={mIdx} 
+                        match={match} 
+                        onClick={() => handleMatchClick(match)} 
+                      />
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className="w-full text-center py-20 text-slate-400 italic">
+                  No bracket generated for this tournament yet.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         ) : (
@@ -155,13 +152,25 @@ const Tournaments = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {tournaments.map((t) => (
-                <Card key={t.id} className="hover:border-blue-500 transition-all cursor-pointer group shadow-md bg-white">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-bold group-hover:text-blue-600 transition-colors uppercase italic">{t.name}</CardTitle>
+                <Card key={t.id} className="hover:border-blue-500 transition-all cursor-pointer group shadow-md bg-white relative overflow-hidden">
+                  <CardHeader className="flex flex-row items-start justify-between">
+                    <CardTitle className="text-xl font-bold group-hover:text-blue-600 transition-colors uppercase italic pr-8">
+                        {t.name}
+                    </CardTitle>
+                    {isOrganizer && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-slate-300 hover:text-red-600 hover:bg-red-50 transition-all -mt-2 -mr-2"
+                            onClick={(e) => handleDeleteTournament(e, t.id)}
+                        >
+                            <Trash2 size={18} />
+                        </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <Calendar size={16} /> {t.date || "Date TBD"}
+                      <Calendar size={16} /> {t.startDate || "Date TBD"}
                     </div>
                     <div className="flex items-center gap-2 text-slate-500 text-sm">
                       <MapPin size={16} /> {t.location || "Location TBD"}
@@ -182,6 +191,7 @@ const Tournaments = () => {
     </div>
   );
 };
+
 
 const MatchCard = ({ match, onClick }) => {
   const isTBD = !match.teamA || !match.teamB;
@@ -225,7 +235,6 @@ const getRoundName = (index, total) => {
   return `Round ${index + 1}`;
 };
 
-//togli la prova da qua
 const MOCK_BRACKET = [
   // Round 1 (Semi-Finals)
   [
@@ -237,6 +246,5 @@ const MOCK_BRACKET = [
     { id: 103, teamA: "Gryffindor", teamB: "Hufflepuff", scoreA: null, scoreB: null, date: "2024-06-10", stadiumName: "Grand Stadium", stadiumId: 3 }
   ]
 ];
-//a qua
 
 export default Tournaments;

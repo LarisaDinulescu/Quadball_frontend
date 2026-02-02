@@ -209,9 +209,10 @@ function App() {
               hasRequiredRole('ROLE_ORGANIZATION_MANAGER') || hasRequiredRole('ROLE_TEAM_MANAGER') ? <CreateTeam /> : <Navigate replace to="/teams" />} 
           />
 
+
           <Route 
             path="/tournaments/create" 
-            element={user?.role === 'ROLE_ORGANIZATION_MANAGER' ? <CreateTournament /> : <Navigate replace to="/tournaments" />} 
+            element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <CreateTournament /> : <Navigate replace to="/tournaments" />} 
           />
           
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -63,20 +63,36 @@ const CreateTournament = () => {
       return;
     }
 
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || !user.id) {
+      setError("User session not found. Please login again.");
+      return;
+    }
+
     setError('');
     setLoading(true);
 
-    // Payload aligned with backend requirements
-    const payload = {
-      name: formData.name,
-      location: formData.location,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      teamIds: selectedTeamIds 
-    };
-
     try {
-      await tournamentService.createTournament(payload);
+      // 1. Create the tournament entity
+      const tournamentPayload = {
+        name: formData.name,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        organizerId: user.id,
+        started: false
+      };
+
+      const createdTournament = await tournamentService.createTournament(tournamentPayload);
+
+      // 2. Associate each selected team
+      const associationPromises = selectedTeamIds.map(teamId => 
+        tournamentService.addTeam(createdTournament.id, teamId)
+      );
+      await Promise.all(associationPromises);
+
+      // 3. GENERATE BRACKET (Call the new backend endpoint)
+      await tournamentService.generateBracket(createdTournament.id);
+      
       navigate('/tournaments');
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create tournament.");

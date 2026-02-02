@@ -106,6 +106,19 @@ const tournamentService = {
         }
     },
 
+    /**
+     * Triggers the bracket generation for a tournament
+     */
+    generateBracket: async (id) => {
+        try {
+            const response = await api.post(`/tournaments/${id}/generate-bracket`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error generating bracket for tournament ${id}:`, error);
+            throw error;
+        }
+    },
+
     // --- GESTIONE MATCH NEL TORNEO ---
 
     // GET /tournaments/{id}/matches
