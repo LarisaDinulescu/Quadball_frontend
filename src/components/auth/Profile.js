@@ -6,7 +6,8 @@ import { User, Mail, Calendar, ShieldCheck, Ticket, Settings, ArrowRight, Edit2,
 import { useNavigate } from 'react-router-dom';
 import reservationService from '../../services/reservationService';
 // Import changePassword along with other user services
-import { updateUserData, deleteUserAccount, changePassword } from '../../services/userService';
+import { updateUserData, changePassword } from '../../services/userService';
+import { hasRole } from "../../services/authService";
 
 const Profile = ({ user }) => {
     const navigate = useNavigate();
@@ -30,7 +31,7 @@ const Profile = ({ user }) => {
         confirmPassword: ''
     });
 
-    const isManager = currentUser?.roles?.includes === 'ROLE_ORGANIZATION_MANAGER';
+    const isManager = hasRole('ROLE_ORGANIZATION_MANAGER');
 
     // Sync props to local state
     useEffect(() => {
@@ -94,34 +95,19 @@ const Profile = ({ user }) => {
         }
     };
 
-    const handleSave = async () => {
-        try {
-            const updatedUser = await updateUserData(currentUser.id, formData);
+  const handleSave = async () => {
+      try {
+          const updatedUser = await updateUserData(currentUser.id, formData);
 
-            setCurrentUser(updatedUser);
-            localStorage.setItem("user", JSON.stringify(updatedUser));
+          setCurrentUser(updatedUser);
+          localStorage.setItem("user", JSON.stringify(updatedUser));
 
-            setIsEditing(false);
-            alert("Profile updated successfully!");
-        } catch (error) {
-            console.error("Update failed", error);
-            alert("Failed to update profile.");
-        }
-    };
-
-    const handleDelete = async () => {
-        if (window.confirm("Are you sure? This action cannot be undone and you will lose all tickets.")) {
-            try {
-                await deleteUserAccount(currentUser.id);
-                localStorage.removeItem("user");
-                localStorage.removeItem("token");
-                navigate('/login');
-            } catch (error) {
-                console.error("Delete failed", error);
-                alert("Could not delete account.");
-            }
-        }
-    };
+          setIsEditing(false);
+          alert("Profile updated!");
+      } catch (error) {
+          alert("Update failed. Please check your data.");
+      }
+  };
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-4xl relative">
@@ -148,9 +134,6 @@ const Profile = ({ user }) => {
                         <>
                             <Button variant="outline" onClick={() => setIsEditing(true)} className="gap-2 border-blue-600 text-blue-600 hover:bg-blue-50">
                                 <Edit2 size={16} /> Edit
-                            </Button>
-                            <Button variant="destructive" onClick={handleDelete} className="gap-2 bg-red-600 hover:bg-red-700 text-white">
-                                <Trash2 size={16} /> Delete
                             </Button>
                         </>
                     ) : (

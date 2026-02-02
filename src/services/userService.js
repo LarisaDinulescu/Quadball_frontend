@@ -1,20 +1,15 @@
 import api from './api'; // Assuming api.js exports your configured Axios instance
 
-// Update User Data
-// Payload should match the DTO expected by backend (e.g., firstName, lastName, email)
 export const updateUserData = async (userId, userData) => {
     try {
-        const response = await api.put(`/users/${userId}`, userData);
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
-};
+        const payloadMap = new Map();
+        payloadMap.set("name", userData.name);
+        payloadMap.set("surname", userData.surname);
 
-// Delete User Account
-export const deleteUserAccount = async (userId) => {
-    try {
-        await api.delete(`/users/${userId}`);
+// Per inviarlo con axios (che richiede un oggetto piano)
+const payload = Object.fromEntries(payloadMap);
+        const response = await api.put(`/users/${userId}`, payload);
+        return response.data;
     } catch (error) {
         throw error;
     }
