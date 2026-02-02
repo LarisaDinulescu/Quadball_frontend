@@ -22,6 +22,7 @@ import OfficialManagement from './components/matchOfficial/OfficialManagement';
 import LiveMatch from './components/live/LiveMatch';
 import MatchDetail from './components/live/MatchDetail';
 import Tournaments from './components/tournaments/Tournaments'; 
+import AssignTeams from './components/tournaments/AssignTeams'; 
 import MatchReservation from './components/booking/MatchReservation';
 import CreateTournament from './components/tournaments/CreateTournament';
 import MatchEditor from './components/tournaments/MatchEditor';
@@ -208,6 +209,17 @@ function App() {
             element={
               hasRequiredRole('ROLE_ORGANIZATION_MANAGER') || hasRequiredRole('ROLE_TEAM_MANAGER') ? <CreateTeam /> : <Navigate replace to="/teams" />} 
           />
+
+          <Route 
+            path="/tournaments/:tournamentId/match/:matchId/assign" 
+            element={
+              hasRequiredRole('ROLE_ORGANIZATION_MANAGER') 
+                ? <AssignTeams /> 
+                : <Navigate to="/tournaments" replace />
+            } 
+          />
+
+
 
 
           <Route 

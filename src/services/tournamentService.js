@@ -144,6 +144,19 @@ const tournamentService = {
         return response.data;
     },
 
+    /**
+     * Updates match results and triggers winner promotion in the tournament bracket
+     */
+    updateMatchResults: async (matchId, matchData) => {
+        try {
+            const response = await api.put(`/tournaments/matches/${matchId}/results`, matchData);
+            return response.data;
+        } catch (error) {
+            console.error(`Error updating results for match ${matchId}:`, error);
+            throw error;
+        }
+    },
+
     // DELETE /tournaments/{tournamentId}/matches/{matchId}
     deleteMatchFromTournament: async (tournamentId, matchId) => {
         try{
