@@ -1,211 +1,222 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Timer, Activity, Trophy } from 'lucide-react';
-import liveService from '../../services/liveService';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import api from "../../services/api";
 
-// --- TIME HELPER ---
-const calculateElapsedTime = (startTimeStr) => {
-    if (!startTimeStr) return "00:00";
-    const start = new Date(startTimeStr).getTime();
-    const now = new Date().getTime();
-    if (now < start) return "00:00";
-    const diffMs = now - start;
-    const minutes = Math.floor(diffMs / 60000);
-    const seconds = Math.floor((diffMs % 60000) / 1000);
-    return `${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-};
+// UI Components
+import { Card, CardContent } from "../ui/card";
+import { Loader2, Trophy, MapPin, ArrowRight } from "lucide-react";
 
-// --- MOCK DATABASE (Contains EVERYTHING: Old, Live, Future) ---
-const MOCK_DATABASE = [
-    {
-        id: 1, homeTeam: "Gryffindor", awayTeam: "Slytherin",
-        homeScore: 40, awayScore: 30,
-        // INIZIATA 15 MIN FA -> DEVE ESSERE SCARICATA
-        schedule: new Date(Date.now() - (15 * 60 * 1000)).toISOString(),
-        period: "1st Half", stadium: "Hogwarts Pitch",
-        snitchCaughtBy: null,
-        events: [
-            { time: "00:00", text: "Brooms Up!", type: "info" },
-            { time: "15:00", text: "Goal by Gryffindor!", type: "goal" }
-        ]
-    },
-    {
-        id: 2, homeTeam: "Ravenclaw", awayTeam: "Hufflepuff",
-        homeScore: 150, awayScore: 160,
-        // FINITA 1 ORA FA (Rientra nelle 3 ore) -> DEVE ESSERE SCARICATA
-        schedule: new Date(Date.now() - (60 * 60 * 1000)).toISOString(),
-        period: "Finished", stadium: "Quidditch World Cup Stadium",
-        snitchCaughtBy: "away",
-        events: [{ time: "55:00", text: "SNITCH CAUGHT BY HUFFLEPUFF!", type: "snitch" }]
-    },
-    {
-        id: 3, homeTeam: "Bulgaria", awayTeam: "Ireland",
-        homeScore: 0, awayScore: 0,
-        // VECCHIA (Ieri) -> NON DEVE ESSERE SCARICATA
-        schedule: new Date(Date.now() - (24 * 60 * 60 * 1000)).toISOString(),
-        period: "Finished", stadium: "Top Box", snitchCaughtBy: "home", events: []
-    },
-    {
-        id: 4, homeTeam: "France", awayTeam: "Spain",
-        homeScore: 0, awayScore: 0,
-        // FUTURA (Tra 2 ore) -> NON DEVE ESSERE SCARICATA (ancora)
-        schedule: new Date(Date.now() + (120 * 60 * 1000)).toISOString(),
-        period: "-", stadium: "Beauxbatons", snitchCaughtBy: null, events: []
-    }
-];
-
-const MatchCard = ({ match }) => {
-    const navigate = useNavigate();
-    const latestEvent = match.events && match.events.length > 0
-        ? match.events[match.events.length - 1]
-        : { text: "No recent events", type: "info" };
-    const isSnitchCaught = !!match.snitchCaughtBy;
-
-    const getEventColor = (type) => {
-        switch (type) {
-            case 'goal': return 'bg-green-100 text-green-800 border-green-200';
-            case 'foul': return 'bg-red-100 text-red-800 border-red-200';
-            case 'snitch': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            default: return 'bg-slate-100 text-slate-700 border-slate-200';
-        }
-    };
-
-    return (
-        <div
-            onClick={() => navigate(`/live/${match.id}`, { state: { matchData: match } })}
-            className={`w-full bg-white rounded-xl shadow-md overflow-hidden mb-6 cursor-pointer hover:shadow-xl transition-all duration-300 group border ${isSnitchCaught ? 'border-yellow-400 ring-1 ring-yellow-200' : 'border-slate-200 hover:border-blue-400'}`}
-        >
-            <div className="px-6 py-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                <div className="flex items-center gap-2">
-                    {!isSnitchCaught ? (
-                        <>
-                            <span className="relative flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                            </span>
-                            <span className="text-xs font-bold text-red-600 tracking-wider uppercase">LIVE • {match.period}</span>
-                        </>
-                    ) : (
-                        <span className="text-xs font-black text-yellow-600 tracking-wider flex items-center gap-2 uppercase">
-                            <Trophy className="w-4 h-4" /> Game Over • Snitch Caught
-                        </span>
-                    )}
-                </div>
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{match.stadium}</span>
-            </div>
-
-            <div className="p-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex flex-col items-center flex-1 relative">
-                        {match.snitchCaughtBy === 'home' && (
-                            <div className="absolute -top-5 animate-bounce z-10">
-                                <Trophy className="w-6 h-6 text-yellow-500 drop-shadow-sm" fill="currentColor" />
-                            </div>
-                        )}
-                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-xl md:text-2xl font-black mb-3 shadow-sm border-2 transition-transform group-hover:scale-105 ${match.snitchCaughtBy === 'home' ? 'bg-yellow-50 text-yellow-600 border-yellow-300' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                            {match.homeTeam.substring(0, 1).toUpperCase()}
-                        </div>
-                        <h3 className="text-lg md:text-xl font-bold text-slate-900 text-center leading-tight uppercase italic">{match.homeTeam}</h3>
-                    </div>
-
-                    <div className="flex flex-col items-center px-4">
-                        <div className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">
-                            {match.homeScore}-{match.awayScore}
-                        </div>
-                        <div className={`mt-2 flex items-center gap-1 font-mono font-bold text-lg ${isSnitchCaught ? 'text-slate-400' : 'text-red-500'}`}>
-                            {!isSnitchCaught && <Timer className="w-4 h-4" />}
-                            {isSnitchCaught ? "FT" : match.time}
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col items-center flex-1 relative">
-                        {match.snitchCaughtBy === 'away' && (
-                            <div className="absolute -top-5 animate-bounce z-10">
-                                <Trophy className="w-6 h-6 text-yellow-500 drop-shadow-sm" fill="currentColor" />
-                            </div>
-                        )}
-                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-xl md:text-2xl font-black mb-3 shadow-sm border-2 transition-transform group-hover:scale-105 ${match.snitchCaughtBy === 'away' ? 'bg-yellow-50 text-yellow-600 border-yellow-300' : 'bg-green-50 text-green-700 border-green-100'}`}>
-                            {match.awayTeam.substring(0, 1).toUpperCase()}
-                        </div>
-                        <h3 className="text-lg md:text-xl font-bold text-slate-900 text-center leading-tight uppercase italic">{match.awayTeam}</h3>
-                    </div>
-                </div>
-            </div>
-
-            <div className={`px-6 py-2 flex items-center justify-center gap-2 border-t text-sm ${getEventColor(latestEvent.type)}`}>
-                <Activity className="w-4 h-4" />
-                <span className="font-bold uppercase text-xs">Latest:</span>
-                <span className="font-medium truncate">{latestEvent.text}</span>
-            </div>
-        </div>
-    );
-};
-
-const LiveMatch = () => {
-    // Stato iniziale vuoto (nessun dato finché non scarichiamo)
+export default function LiveMatch() {
     const [matches, setMatches] = useState([]);
+    const [teamsMap, setTeamsMap] = useState({});
+    const [loading, setLoading] = useState(true);
+    const stompClientRef = useRef(null);
+    const navigate = useNavigate();
 
-    const fetchMatches = async () => {
-        try {
-            // 1. Chiamiamo il backend. Ci aspettiamo che il backend ci dia SOLO le partite giuste.
-            const data = await liveService.getLiveMatches();
-            setMatches(data); // Usiamo direttamente i dati ricevuti
-
-        } catch (error) {
-            console.warn("Backend non raggiungibile. Simulo la query del backend sui dati Mock...");
-
-            // LOGICA DI SIMULAZIONE BACKEND (Solo per sviluppo)
-            // Filtriamo il MOCK_DATABASE per restituire solo quello che restituirebbe il server
-            const now = Date.now();
-            const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
-
-            const simulatedBackendResponse = MOCK_DATABASE.filter(m => {
-                const start = new Date(m.schedule).getTime();
-
-                // La logica SQL sarebbe: WHERE start_time > (NOW - 3h) AND start_time <= NOW
-                const hasStarted = start <= now;
-                const isRelevant = (now - start) < THREE_HOURS_MS;
-
-                return hasStarted && isRelevant;
-            });
-
-            setMatches(simulatedBackendResponse);
-        }
+    // Helper data di oggi (YYYY-MM-DD) per il filtro
+    const getTodayString = () => {
+        const d = new Date();
+        return d.toISOString().split('T')[0]; // Es: "2026-02-02"
     };
 
+    // 1. Fetch Iniziale
     useEffect(() => {
-        fetchMatches();
-        const pollInterval = setInterval(fetchMatches, 10000);
-        const timerInterval = setInterval(() => {
-            setMatches(current => current.map(m => ({ ...m, time: calculateElapsedTime(m.schedule) })));
-        }, 1000);
+        const initData = async () => {
+            try {
+                setLoading(true);
+                // Mappa Team
+                const tRes = await api.get('/teams');
+                const tMap = {};
+                if (Array.isArray(tRes.data)) tRes.data.forEach(t => tMap[t.id] = t.name);
+                setTeamsMap(tMap);
 
-        return () => { clearInterval(pollInterval); clearInterval(timerInterval); };
+                // Lista Match Completa
+                const mRes = await api.get('/matches');
+                // Manteniamo TUTTI i match nello stato, filtriamo solo al momento del render.
+                // Così se una partita programmata inizia via socket, la vedremo apparire.
+                const sorted = (mRes.data || []).sort((a, b) => b.id - a.id);
+                setMatches(sorted);
+            } catch (err) {
+                console.error("Error fetching data", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        initData();
     }, []);
 
+    // 2. WebSocket
+    useEffect(() => {
+        const socketUrl = 'http://localhost:8080/ws-quadball';
+        const client = new Client({
+            webSocketFactory: () => new SockJS(socketUrl),
+            onConnect: () => {
+                client.subscribe('/topic/all-matches', (message) => {
+                    if (message.body) handleGlobalUpdate(JSON.parse(message.body));
+                });
+            },
+        });
+        client.activate();
+        stompClientRef.current = client;
+        return () => { if (stompClientRef.current) stompClientRef.current.deactivate(); };
+    }, []);
+
+    const handleGlobalUpdate = (event) => {
+        setMatches(prev => prev.map(match => {
+            if (match.id === event.matchId) {
+                const newHomeScore = event.matchScore ? event.matchScore[match.homeTeamId] : match.homeScore;
+                const newAwayScore = event.matchScore ? event.matchScore[match.awayTeamId] : match.awayScore;
+                const caughtId = (event.type === 'SNITCH_CAUGHT') ? event.teamId : match.snitchCaughtByTeamId;
+
+                return {
+                    ...match,
+                    homeScore: newHomeScore,
+                    awayScore: newAwayScore,
+                    gameMinute: event.gameMinute,
+                    snitchCaughtByTeamId: caughtId
+                };
+            }
+            return match;
+        }));
+    };
+
+    const getTeamName = (id) => teamsMap[id] || `Team ${id}`;
+
+    const getMatchStatusConfig = (match) => {
+        const isFinished = match.snitchCaughtByTeamId != null;
+        const isStarted = match.homeScore !== null && match.awayScore !== null;
+        const isLive = isStarted && !isFinished;
+
+        if (isLive) return {
+            color: "border-red-600",
+            icon: (
+                <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+        </span>
+            ),
+            label: "LIVE",
+            labelClass: "text-[10px] font-black text-red-600 tracking-widest uppercase",
+            scoreColor: "text-slate-900 scale-110"
+        };
+
+        if (isFinished) return {
+            color: "border-slate-400",
+            icon: <Trophy className="text-slate-400" size={16} />,
+            label: "FINISHED",
+            labelClass: "text-[10px] font-black text-slate-400 tracking-widest uppercase",
+            scoreColor: "text-slate-500"
+        };
+
+        // Fallback per Scheduled (anche se verranno filtrate via)
+        return {
+            color: "border-indigo-600",
+            icon: null,
+            label: "SCHEDULED",
+            labelClass: "text-[10px] font-black text-indigo-600 tracking-widest uppercase",
+            scoreColor: "text-slate-300"
+        };
+    };
+
+    // --- LOGICA DI FILTRAGGIO ---
+    const today = getTodayString();
+
+    const displayedMatches = matches.filter(match => {
+        const isStarted = match.homeScore !== null && match.awayScore !== null;
+        const isFinished = match.snitchCaughtByTeamId != null;
+        const isLive = isStarted && !isFinished;
+
+        // Mostra se è LIVE oppure se è FINITA OGGI
+        // match.date è una stringa "yyyy-mm-dd" dal backend
+        const isFinishedToday = isFinished && match.date === today;
+
+        return isLive || isFinishedToday;
+    });
+
+    if (loading) return (
+        <div className="flex h-screen items-center justify-center font-bold text-indigo-600 uppercase tracking-widest bg-slate-50">
+            <Loader2 className="animate-spin mr-2" /> Loading Matches...
+        </div>
+    );
+
     return (
-        <div className="min-h-screen bg-slate-50 p-8">
+        <div className="min-h-screen bg-slate-50 p-6">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-10">
-                    <h1 className="text-4xl font-black italic uppercase tracking-tighter">
-                        Live <span className="text-blue-600">Match</span>
-                    </h1>
+                    <div>
+                        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">
+                            Match Center
+                        </h1>
+                        <p className="text-slate-500 font-medium">Today's Live & Results</p>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-                    {matches.length > 0 ? (
-                        matches.map(match => <MatchCard key={match.id} match={match} />)
-                    ) : (
-                        <div className="col-span-full text-center py-20 bg-white rounded-xl shadow-md border border-slate-200">
-                            <Activity className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-slate-700">No live matches</h3>
-                            <p className="text-slate-400 mt-2">Matches appear here automatically when they start.</p>
-                        </div>
-                    )}
-                </div>
+                {displayedMatches.length === 0 ? (
+                    <div className="text-center py-20 bg-white rounded-lg border-2 border-dashed border-slate-200">
+                        <Trophy className="mx-auto text-slate-300 mb-4" size={48}/>
+                        <h3 className="text-xl font-bold text-slate-700 uppercase">No Matches Today</h3>
+                        <p className="text-slate-400">There are no live or finished games for today.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {displayedMatches.map((match) => {
+                            const status = getMatchStatusConfig(match);
+
+                            return (
+                                <Card
+                                    key={match.id}
+                                    className={`bg-white border-none shadow-md hover:shadow-xl transition-all cursor-pointer group border-t-4 ${status.color}`}
+                                    onClick={() => navigate(`/live/${match.id}`)}
+                                >
+                                    <CardContent className="p-6 space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                {status.icon}
+                                                <span className={status.labelClass}>
+                          {status.label}
+                        </span>
+                                            </div>
+                                            {match.gameMinute > 0 && status.label === "LIVE" && (
+                                                <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                            {match.gameMinute}'
+                         </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between mt-2">
+                                            <div className="flex-1 text-center">
+                                                <h2 className="text-lg font-bold uppercase tracking-tight text-slate-800 leading-none">
+                                                    {getTeamName(match.homeTeamId)}
+                                                </h2>
+                                            </div>
+                                            <div className={`mx-4 text-4xl font-black tracking-tighter ${status.scoreColor} transition-transform`}>
+                                                {match.homeScore !== null ? `${match.homeScore}-${match.awayScore}` : "VS"}
+                                            </div>
+                                            <div className="flex-1 text-center">
+                                                <h2 className="text-lg font-bold uppercase tracking-tight text-slate-800 leading-none">
+                                                    {getTeamName(match.awayTeamId)}
+                                                </h2>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-slate-500">
+                                            <div className="flex items-center gap-2">
+                                                <MapPin size={14} className="text-indigo-400" />
+                                                <span className="text-xs font-bold uppercase tracking-wide">
+                            {match.stadiumId ? `Stadium ${match.stadiumId}` : 'TBA'}
+                        </span>
+                                            </div>
+                                            <ArrowRight size={16} className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );
-};
-
-export default LiveMatch;
+}
