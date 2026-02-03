@@ -15,29 +15,31 @@ const reservationService = {
     }
   },
 
-    getReservationsById: async (id) => {
+  /**
+   * Retrieves reservations for a specific user by id
+   * Used for the Spectator's profile page
+   */
+    getReservationByUserId: async (userId) => {
         try {
-            const response = await api.get(`/reservations/${id}`);
+            const response = await api.get(`/reservations/user/${userId}`);
             return response.data;
         } catch (error) {
-            console.error(`Error fetching reservation ${id}:`, error);
+            console.error(`Error fetching reservations for user ID ${userId}:`, error);
             throw error;
         }
     },
 
-  /**
-   * Retrieves reservations for a specific user by email
-   * Used for the Spectator's profile page
-   */
-  getUserReservations: async (email) => {
-    try {
-      const response = await api.get(`/reservations/user/${email}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching reservations for user ${email}:`, error);
-      throw error;
-    }
+  getReservationById: async (Id) => { // <--- Cambia parametro in userId
+      try {
+          const response = await api.get(`/reservations/${Id}`);
+          return response.data;
+      } catch (error) {
+          console.error(`Error fetching reservation ID ${Id}:`, error);
+          throw error;
+      }
   },
+
+
 
   /**
    * Creates a new reservation

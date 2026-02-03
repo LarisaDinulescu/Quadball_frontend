@@ -84,12 +84,15 @@ export const getSessionData = () => {
  * @param {string|string[]} requiredRoles 
  */
 export const hasRole = (requiredRoles) => {
-  const user = getSessionData();
-  
-  // Based on your SignInResponse 'user' object and 'rules' list
-  if (!user || !user.roles) return false;
-  
-  const rolesToCheck = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
-  
-  return user.roles.some(role => rolesToCheck.includes(role));
+    const user = getSessionData();
+
+    if (!user || !user.roles) return false;
+
+    const rolesToCheck = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
+
+    return user.roles.some(r => {
+        const userRoleString = typeof r === 'object' ? (r.roleName || r.authority || r.name) : r;
+
+        return rolesToCheck.includes(userRoleString);
+    });
 };

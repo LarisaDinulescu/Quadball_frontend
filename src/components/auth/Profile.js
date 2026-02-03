@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-// Added 'Lock' to the imports for the new button icon
-import { User, Mail, Calendar, ShieldCheck, Ticket, Settings, ArrowRight, Edit2, Trash2, Save, X, Lock } from "lucide-react";
+import { User, Mail, Calendar, ShieldCheck, Ticket, Settings, ArrowRight, Edit2, Save, X, Lock } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import reservationService from '../../services/reservationService';
-// Import changePassword along with other user services
 import { updateUserData, changePassword } from '../../services/userService';
 import { hasRole } from "../../services/authService";
 
@@ -46,12 +44,13 @@ const Profile = ({ user }) => {
 
     // Load reservations
     useEffect(() => {
-        if (currentUser?.email) {
-            reservationService.getUserReservations(currentUser.email)
+        // Controlliamo se c'è l'ID invece della mail
+        if (currentUser?.id) {
+            reservationService.getReservationByUserId(currentUser.id) // <--- Passiamo l'ID!
                 .then(setMyReservations)
                 .catch(err => console.error("Could not load reservations", err));
         }
-    }, [currentUser.email]);
+    }, [currentUser.id]);
 
     // --- HANDLERS ---
 
@@ -86,7 +85,6 @@ const Profile = ({ user }) => {
             setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' }); // Reset form
         } catch (error) {
             console.error("Password change failed", error);
-            // Optional: Check if error is 401 (Unauthorized) which usually means wrong old password
             if (error.response && error.response.status === 401) {
                 alert("The current password you entered is incorrect.");
             } else {
@@ -95,19 +93,31 @@ const Profile = ({ user }) => {
         }
     };
 
-  const handleSave = async () => {
-      try {
-          const updatedUser = await updateUserData(currentUser.id, formData);
+    const handleSave = async () => {
+        try {
+            const updatedUser = await updateUserData(currentUser.id, formData);
 
-          setCurrentUser(updatedUser);
-          localStorage.setItem("user", JSON.stringify(updatedUser));
+            setCurrentUser(updatedUser);
+            localStorage.setItem("user", JSON.stringify(updatedUser));
 
-          setIsEditing(false);
-          alert("Profile updated!");
-      } catch (error) {
-          alert("Update failed. Please check your data.");
-      }
-  };
+            setIsEditing(false);
+            alert("Profile updated!");
+        } catch (error) {
+            alert("Update failed. Please check your data.");
+        }
+    };
+
+    // --- HELPER PER VISUALIZZARE IL RUOLO ---
+    // Gestisce sia oggetti {roleName: '...'} che stringhe 'ROLE_...'
+    const getRoleLabel = () => {
+        if (!currentUser.roles || currentUser.roles.length === 0) return 'Not specified';
+
+        const roleObj = currentUser.roles[0];
+        // Se è un oggetto prendi .roleName, altrimenti usa la stringa diretta
+        const roleString = typeof roleObj === 'object' ? roleObj.roleName : roleObj;
+
+        return roleString.replace('ROLE_', '').replace('_', ' ');
+    };
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-4xl relative">
@@ -123,7 +133,10 @@ const Profile = ({ user }) => {
                         </h1>
                         <p className="text-slate-500 flex items-center gap-1">
                             <ShieldCheck size={16} className="text-blue-600" />
-                            Role: <span className="font-semibold text-blue-600">{currentUser.roles ? currentUser.roles[0].replace('ROLE_', '').replace('_', ' ') : 'Not specified'}</span>
+                            Role: <span className="font-semibold text-blue-600">
+                                {/* USIAMO LA FUNZIONE HELPER QUI */}
+                            {getRoleLabel()}
+                            </span>
                         </p>
                     </div>
                 </div>
