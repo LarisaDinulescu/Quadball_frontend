@@ -4,9 +4,9 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import api from "../../services/api";
 
-// Assicurati di avere questi componenti UI
+// UI Components
 import { Card, CardContent } from "../ui/card";
-import { Loader2, Trophy, MapPin, ArrowRight, Timer, Calendar } from "lucide-react";
+import { Loader2, Trophy, MapPin, ArrowRight, Calendar } from "lucide-react";
 
 export default function LiveMatch() {
     const [matches, setMatches] = useState([]);
@@ -21,22 +21,18 @@ export default function LiveMatch() {
         return d.toISOString().split('T')[0];
     };
 
-    // Helper Manager Blindato
+    // Helper Manager
     const isManager = () => {
         const userStr = localStorage.getItem('user');
         if (!userStr) return false;
         try {
             const user = JSON.parse(userStr);
             const targetRole = 'ROLE_ORGANIZATION_MANAGER';
-
-            // Controlla tutte le possibili strutture dei ruoli
             if (Array.isArray(user.roles)) {
-                // Caso array di stringhe o array di oggetti
                 return user.roles.includes(targetRole) || user.roles.some(r => r.name === targetRole || r.authority === targetRole);
             }
             if (typeof user.roles === 'string') return user.roles === targetRole;
             if (user.role === targetRole) return true;
-
             return false;
         } catch (e) { return false; }
     };
@@ -53,7 +49,14 @@ export default function LiveMatch() {
 
                 const mRes = await api.get('/matches');
                 const sorted = (mRes.data || []).sort((a, b) => b.id - a.id);
-                setMatches(sorted);
+
+                // Mappiamo i dati aggiungendo un flag esplicito 'isMatchFinished' basato sul DB
+                const mappedMatches = sorted.map(m => ({
+                    ...m,
+                    isMatchFinished: m.snitchCaughtByTeamId != null // Se c'è un catcher, è finita
+                }));
+
+                setMatches(mappedMatches);
             } catch (err) { console.error(err); } finally { setLoading(false); }
         };
         initData();
@@ -80,14 +83,28 @@ export default function LiveMatch() {
             if (match.id === event.matchId) {
                 const newHomeScore = event.matchScore ? event.matchScore[match.homeTeamId] : match.homeScore;
                 const newAwayScore = event.matchScore ? event.matchScore[match.awayTeamId] : match.awayScore;
-                const caughtId = (event.type === 'SNITCH_CAUGHT') ? event.teamId : match.snitchCaughtByTeamId;
+
+                // LOGICA STATO FINITO
+                let finished = match.isMatchFinished;
+                let caughtId = match.snitchCaughtByTeamId;
+
+                if (event.type === 'MATCH_START') {
+                    finished = false; // Ricomincia -> LIVE
+                    caughtId = null;
+                } else if (event.type === 'SNITCH_CAUGHT') {
+                    finished = true;  // Preso boccino -> FINITA
+                    caughtId = event.teamId;
+                } else if (event.type === 'MATCH_END') {
+                    finished = true;  // Fischio finale -> FINITA (sicuro al 100%)
+                }
 
                 return {
                     ...match,
                     homeScore: newHomeScore,
                     awayScore: newAwayScore,
                     gameMinute: event.gameMinute,
-                    snitchCaughtByTeamId: caughtId
+                    snitchCaughtByTeamId: caughtId,
+                    isMatchFinished: finished // Usiamo questo flag per la UI
                 };
             }
             return match;
@@ -98,17 +115,31 @@ export default function LiveMatch() {
 
     // 3. Configurazione Grafica Stato
     const getMatchStatusConfig = (match) => {
-        const isFinished = match.snitchCaughtByTeamId != null;
-        const isStarted = match.homeScore !== null && match.awayScore !== null;
+        // Usiamo il flag calcolato (che considera sia DB che WebSocket)
+        const isFinished = match.isMatchFinished === true;
+        const isStarted = (match.homeScore !== null && match.awayScore !== null);
+
+        // È Live solo se è iniziata E NON è finita
         const isLive = isStarted && !isFinished;
 
+        // CASO 1: PARTITA FINITA
+        if (isFinished) return {
+            borderColor: "border-slate-400",
+            icon: <Trophy size={14} className="text-yellow-600 mr-1" />,
+            label: "FINISHED",
+            labelClass: "text-slate-600 bg-slate-200 px-2 py-0.5 rounded",
+            scoreClass: "text-slate-700",
+            showMinute: false
+        };
+
+        // CASO 2: LIVE NOW
         if (isLive) return {
-            borderColor: "border-red-500", // Bordo Rosso acceso
+            borderColor: "border-red-500",
             icon: (
                 <span className="relative flex h-2.5 w-2.5 mr-1">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
-        </span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                </span>
             ),
             label: "LIVE NOW",
             labelClass: "text-red-600 font-black tracking-widest",
@@ -116,20 +147,12 @@ export default function LiveMatch() {
             showMinute: true
         };
 
-        if (isFinished) return {
-            borderColor: "border-yellow-500", // Bordo Giallo Oro
-            icon: <Trophy size={14} className="text-yellow-600 mr-1" />,
-            label: "FINAL SCORE",
-            labelClass: "text-yellow-600 font-black tracking-widest",
-            scoreClass: "text-slate-900",
-            showMinute: false
-        };
-
+        // CASO 3: PROGRAMMATA
         return {
-            borderColor: "border-indigo-500", // Bordo Indaco standard
-            icon: <Calendar size={14} className="text-indigo-600 mr-1" />,
+            borderColor: "border-blue-100",
+            icon: <Calendar size={14} className="text-slate-400 mr-1" />,
             label: "SCHEDULED",
-            labelClass: "text-indigo-600 font-black tracking-widest",
+            labelClass: "text-slate-400 font-black tracking-widest",
             scoreClass: "text-slate-300",
             showMinute: false
         };
@@ -140,16 +163,21 @@ export default function LiveMatch() {
     const userIsManager = isManager();
 
     const displayedMatches = matches.filter(match => {
-        const isStarted = match.homeScore !== null && match.awayScore !== null;
-        const isFinished = match.snitchCaughtByTeamId != null;
-        const isLive = isStarted && !isFinished;
+        // Logica di visualizzazione
+        const isFinished = match.isMatchFinished === true;
+        const isStarted = match.homeScore !== null;
 
-        if (isLive) return true;
-        if (isFinished && match.date === today) return true;
+        // Sempre visibili le Live
+        if (isStarted && !isFinished) return true;
 
-        // Il manager vede anche le programmate per poterle avviare
-        const isScheduled = !isStarted && !isFinished;
-        if (userIsManager && isScheduled) return true;
+        // Sempre visibili le Finite (se oggi o recenti, qui mettiamo sempre per semplicità debug)
+        if (isFinished) return true;
+
+        // Manager vede le programmate
+        if (userIsManager && !isStarted) return true;
+
+        // Utenti vedono programmate di oggi
+        if (!isStarted && match.date === today) return true;
 
         return false;
     });
@@ -190,22 +218,20 @@ export default function LiveMatch() {
                                     onClick={() => navigate(`/live/${match.id}`)}
                                 >
                                     <CardContent className="p-6">
-                                        {/* Header Stato */}
                                         <div className="flex justify-between items-center mb-6">
                                             <div className="flex items-center">
                                                 {status.icon}
-                                                <span className={`text-[10px] uppercase ${status.labelClass}`}>
-                          {status.label}
-                        </span>
+                                                <span className={`text-[10px] uppercase font-bold ${status.labelClass}`}>
+                                                    {status.label}
+                                                </span>
                                             </div>
                                             {match.gameMinute > 0 && status.showMinute && (
                                                 <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                           {match.gameMinute}'
-                        </span>
+                                                    {match.gameMinute}'
+                                                </span>
                                             )}
                                         </div>
 
-                                        {/* Scoreboard */}
                                         <div className="flex items-center justify-between">
                                             <div className="flex-1 text-center">
                                                 <h2 className="text-sm font-bold uppercase tracking-tight text-slate-800 leading-tight">
@@ -224,13 +250,12 @@ export default function LiveMatch() {
                                             </div>
                                         </div>
 
-                                        {/* Footer Location */}
                                         <div className="mt-6 pt-4 border-t border-slate-50 flex justify-between items-center text-slate-400">
                                             <div className="flex items-center gap-2">
                                                 <MapPin size={12} />
                                                 <span className="text-[10px] font-bold uppercase tracking-widest">
-                            {match.stadiumId ? `Stadium ${match.stadiumId}` : 'Arena TBA'}
-                        </span>
+                                                    {match.stadiumName || `Stadium ${match.stadiumId || 'TBA'}`}
+                                                </span>
                                             </div>
                                             <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 text-indigo-600" />
                                         </div>

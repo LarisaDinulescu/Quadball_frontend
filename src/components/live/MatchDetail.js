@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { Trophy, ChevronLeft, Activity, MapPin, Timer, Play, Loader2, Ban } from 'lucide-react'; // Aggiunto Ban icon
+import { Trophy, ChevronLeft, Activity, MapPin, Timer, Play, Loader2, RefreshCw, Calendar, Clock } from 'lucide-react';
 import { Button } from "../ui/button";
 import api from '../../services/api';
 
@@ -15,14 +15,15 @@ const MatchDetail = () => {
     const [currentScore, setCurrentScore] = useState({ home: 0, away: 0 });
     const [gameMinute, setGameMinute] = useState(0);
 
+    // Mappe per convertire ID in Nomi
     const [teamsMap, setTeamsMap] = useState({});
     const [playersMap, setPlayersMap] = useState({});
-    const [eventsLog, setEventsLog] = useState([]);
 
+    const [eventsLog, setEventsLog] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
 
-    // STATI FONDAMENTALI
+    // Stati di controllo
     const [isMatchEnded, setIsMatchEnded] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
 
@@ -35,14 +36,26 @@ const MatchDetail = () => {
         try {
             const user = JSON.parse(userStr);
             const targetRole = 'ROLE_ORGANIZATION_MANAGER';
-            if (Array.isArray(user.roles)) return user.roles.includes(targetRole) || user.roles.some(r => r.authority === targetRole || r.name === targetRole);
+            if (Array.isArray(user.roles)) return user.roles.includes(targetRole) || user.roles.some(r => r.name === targetRole || r.authority === targetRole);
             if (typeof user.roles === 'string') return user.roles === targetRole;
             if (user.role === targetRole) return true;
             return false;
         } catch (e) { return false; }
     };
 
-    const getTeamName = (id) => teamsMap[id] || `Team ${id}`;
+    const getTeamName = (id, map = teamsMap) => map[id] || `Team ${id}`;
+
+    // Formattazione Data e Ora
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateStr).toLocaleDateString('en-US', options);
+    };
+
+    const formatTime = (timeStr) => {
+        if (!timeStr) return '';
+        return timeStr.substring(0, 5); // Prende solo HH:MM
+    };
 
     const getEventStyle = (type) => {
         if (type === 'SCORE') return 'border-green-500 bg-green-50';
@@ -52,9 +65,12 @@ const MatchDetail = () => {
         return 'border-slate-200 bg-white';
     };
 
-    const generateDescription = (ev) => {
-        const playerName = playersMap[ev.playerId] || `Player ${ev.playerId}`;
-        const teamName = teamsMap[ev.teamId] || `Team ${ev.teamId}`;
+    // Generatore descrizioni (accetta mappe opzionali per funzionare durante il load iniziale)
+    const generateDescription = (ev, tMap = teamsMap, pMap = playersMap) => {
+        // Recupera nome giocatore e team dalle mappe
+        const playerName = pMap[ev.playerId] || `Player ${ev.playerId}`;
+        const teamName = tMap[ev.teamId] || `Team ${ev.teamId}`;
+
         switch (ev.type) {
             case 'MATCH_START': return "The Quaffle is released! Match Started.";
             case 'SCORE': return `GOAL! ${playerName} scores 10 points for ${teamName}!`;
@@ -68,46 +84,76 @@ const MatchDetail = () => {
         }
     };
 
-    // --- 2. CARICAMENTO DATI ---
+    // --- 2. CARICAMENTO DATI (CORRETTO con Promise.all) ---
     useEffect(() => {
-        const fetchStaticData = async () => {
+        const fetchAllData = async () => {
             try {
-                // A. Match Info
-                const matchRes = await api.get(`/matches/${id}`);
+                // 1. Scarichiamo TUTTO in parallelo per avere le mappe pronte subito
+                const [matchRes, teamRes, playerRes] = await Promise.all([
+                    api.get(`/matches/${id}`),
+                    api.get('/teams'),
+                    api.get('/players')
+                ]);
+
+                // A. Costruiamo le Mappe SUBITO
+                const tMap = {};
+                if (Array.isArray(teamRes.data)) teamRes.data.forEach(t => tMap[t.id] = t.name);
+
+                const pMap = {};
+                if (Array.isArray(playerRes.data)) playerRes.data.forEach(p => {
+                    // Combina Nome e Cognome se presente
+                    const fullName = p.surname ? `${p.name} ${p.surname}` : p.name;
+                    pMap[p.id] = fullName;
+                });
+
+                // Salviamo nello stato per l'uso futuro
+                setTeamsMap(tMap);
+                setPlayersMap(pMap);
                 setMatchInfo(matchRes.data);
 
-                // --- FIX IMPORTANTE: Se il boccino è stato preso, la partita è FINITA ---
+                // B. Impostiamo punteggi e stato
                 if (matchRes.data.snitchCaughtByTeamId != null) {
                     setIsMatchEnded(true);
                 }
-
                 setCurrentScore({
                     home: matchRes.data.homeScore || 0,
                     away: matchRes.data.awayScore || 0
                 });
 
-                // B. Teams
-                const teamRes = await api.get('/teams');
-                const tMap = {};
-                if (Array.isArray(teamRes.data)) teamRes.data.forEach(t => tMap[t.id] = t.name);
-                setTeamsMap(tMap);
+                // C. Ora scarichiamo lo storico eventi e usiamo le mappe APPENA create
+                try {
+                    const eventsRes = await api.get(`/live-game-events/match/${id}`);
 
-                // C. Players
-                const playerRes = await api.get('/players');
-                const pMap = {};
-                if (Array.isArray(playerRes.data)) playerRes.data.forEach(p => {
-                    const fullName = p.surname ? `${p.name} ${p.surname}` : p.name;
-                    pMap[p.id] = fullName;
-                });
-                setPlayersMap(pMap);
+                    if (Array.isArray(eventsRes.data) && eventsRes.data.length > 0) {
+                        const sortedEvents = eventsRes.data.sort((a, b) => b.gameMinute - a.gameMinute || new Date(b.timestamp) - new Date(a.timestamp));
+
+                        // Controllo finale
+                        const lastEvent = sortedEvents[0];
+                        if (lastEvent.type === 'MATCH_END' || lastEvent.type === 'SNITCH_CAUGHT') {
+                            setIsMatchEnded(true);
+                        }
+
+                        // Formattiamo usando tMap e pMap locali!
+                        const formattedEvents = sortedEvents.map(ev => ({
+                            ...ev,
+                            description: generateDescription(ev, tMap, pMap),
+                            style: getEventStyle(ev.type)
+                        }));
+
+                        setEventsLog(formattedEvents);
+                        setGameMinute(formattedEvents[0].gameMinute);
+                    }
+                } catch (e) {
+                    console.warn("Nessun evento storico o errore API", e);
+                }
 
                 setLoading(false);
             } catch (error) {
-                console.error("Errore dati:", error);
+                console.error("Errore caricamento dati:", error);
                 setLoading(false);
             }
         };
-        fetchStaticData();
+        fetchAllData();
     }, [id]);
 
     // --- 3. WEBSOCKET ---
@@ -133,7 +179,7 @@ const MatchDetail = () => {
         return () => { if (stompClientRef.current) stompClientRef.current.deactivate(); };
     }, [id, matchInfo]);
 
-    // --- 4. GESTIONE EVENTI ---
+    // --- 4. GESTIONE EVENTI LIVE ---
     const handleLiveEvent = (event) => {
         setGameMinute(event.gameMinute);
         if (event.matchScore && matchInfo) {
@@ -144,14 +190,18 @@ const MatchDetail = () => {
             }
         }
 
-        // Se arriva evento di fine o presa boccino, segna come finita
-        if (event.type === 'MATCH_END' || event.type === 'SNITCH_CAUGHT') {
+        // Se arriva un evento di reset (Start), resetta lo stato finito
+        if (event.type === 'MATCH_START') {
+            setIsMatchEnded(false);
+        }
+        // Se arriva evento di fine
+        else if (event.type === 'MATCH_END' || event.type === 'SNITCH_CAUGHT') {
             setIsMatchEnded(true);
         }
 
         const logEntry = {
             ...event,
-            description: generateDescription(event),
+            description: generateDescription(event), // Qui usa lo stato globale (aggiornato)
             style: getEventStyle(event.type)
         };
         setEventsLog(prev => [logEntry, ...prev]);
@@ -161,12 +211,18 @@ const MatchDetail = () => {
     const handleStartSimulation = async () => {
         try {
             setIsSimulating(true);
-            // IMPORTANTE: Assicurati che l'URL qui corrisponda al tuo LiveSimulationController
+
+            // Reset immediato UI
+            setIsMatchEnded(false);
+            setEventsLog([]);
+            setGameMinute(0);
+            setCurrentScore({home: 0, away: 0});
+
             await api.post(`/simulation/matches/${id}/start-match`);
             console.log("Simulation started successfully");
         } catch (error) {
             console.error("Error starting match simulation:", error);
-            alert("Errore 403: Verifica che il tuo utente sia Manager e che WebSecurityConfig permetta l'accesso a /api/simulation/**");
+            alert("Errore avvio simulazione.");
         } finally {
             setIsSimulating(false);
         }
@@ -181,24 +237,39 @@ const MatchDetail = () => {
 
     if (!matchInfo) return <div className="p-10 text-center">Match not found</div>;
 
-    // Definiamo se la partita è iniziata (se ha punteggio o eventi)
     const isStarted = (matchInfo.homeScore !== null) || (eventsLog.length > 0) || (currentScore.home > 0 || currentScore.away > 0);
 
     return (
         <div className="min-h-screen bg-slate-50 py-8 px-4">
             <div className="max-w-4xl mx-auto">
-                <Button variant="ghost" onClick={() => navigate('/live')} className="mb-6 text-slate-500 hover:text-slate-800 font-bold uppercase text-xs tracking-wider">
-                    <ChevronLeft className="w-5 h-5 mr-1" /> Back
-                </Button>
+                {/* Header Navigazione */}
+                <div className="flex justify-between items-center mb-6">
+                    <Button variant="ghost" onClick={() => navigate('/live')} className="text-slate-500 hover:text-slate-800 font-bold uppercase text-xs tracking-wider">
+                        <ChevronLeft className="w-5 h-5 mr-1" /> Back to Arena
+                    </Button>
+
+                    {/* DATA E ORA */}
+                    <div className="flex items-center gap-4 text-slate-500 text-xs font-bold uppercase tracking-wider bg-white px-4 py-2 rounded-full shadow-sm">
+                        <span className="flex items-center gap-1.5">
+                            <Calendar size={14} className="text-indigo-500"/> {formatDate(matchInfo.date)}
+                        </span>
+                        <span className="w-px h-3 bg-slate-300"></span>
+                        <span className="flex items-center gap-1.5">
+                            <Clock size={14} className="text-indigo-500"/> {formatTime(matchInfo.time) || "TBA"}
+                        </span>
+                    </div>
+                </div>
 
                 {/* SCOREBOARD */}
-                <div className={`bg-white rounded-3xl shadow-xl overflow-hidden mb-8 border-2 ${isMatchEnded ? 'border-yellow-400' : 'border-blue-100'}`}>
+                <div className={`bg-white rounded-3xl shadow-xl overflow-hidden mb-8 border-2 ${
+                    isMatchEnded ? 'border-slate-300' : (isStarted ? 'border-red-400' : 'border-blue-100')
+                }`}>
+                    {/* Scoreboard Header */}
                     <div className="bg-slate-50 px-6 py-3 border-b flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                            {/* LOGICA STATO AGGIORNATA */}
                             {isMatchEnded ? (
-                                <span className="text-xs font-black text-yellow-600 tracking-widest uppercase flex items-center gap-2">
-                                    <Trophy size={14} /> FINAL SCORE
+                                <span className="text-xs font-black text-slate-600 bg-slate-200 px-3 py-1 rounded-full tracking-widest uppercase flex items-center gap-2">
+                                    <Trophy size={14} className="text-yellow-600"/> FINISHED
                                 </span>
                             ) : isStarted ? (
                                 <>
@@ -212,10 +283,11 @@ const MatchDetail = () => {
                             )}
                         </div>
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                            <MapPin size={12} /> {matchInfo.stadiumName || 'Stadium TBA'}
+                            <MapPin size={12} /> {matchInfo.stadiumName || `Stadium ${matchInfo.stadiumId || 'TBA'}`}
                         </div>
                     </div>
 
+                    {/* Scoreboard Body */}
                     <div className="p-8">
                         <div className="flex items-center justify-between">
                             {/* HOME */}
@@ -227,7 +299,7 @@ const MatchDetail = () => {
 
                             {/* SCORE */}
                             <div className="flex flex-col items-center px-6">
-                                <div className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter transition-all duration-300">
+                                <div className={`text-6xl md:text-8xl font-black tracking-tighter transition-all duration-300 ${isMatchEnded ? 'text-slate-700' : 'text-slate-900'}`}>
                                     {isStarted ? `${currentScore.home}-${currentScore.away}` : "VS"}
                                 </div>
                                 {isStarted && !isMatchEnded && (
@@ -254,73 +326,59 @@ const MatchDetail = () => {
                 </h3>
 
                 <div className="space-y-3">
-                    {/* Se la partita è iniziata o finita, mostra il feed */}
-                    {isStarted || isMatchEnded ? (
-                        <>
-                            {eventsLog.length === 0 && isMatchEnded && (
-                                <div className="text-center py-6 text-slate-400 italic">Match ended (Load events history if available)</div>
-                            )}
-                            {eventsLog.map((ev, idx) => (
-                                <div key={idx} className={`p-4 rounded-xl shadow-sm border-l-4 flex items-start gap-4 animate-in slide-in-from-top-2 ${ev.style}`}>
-                                    <div className="font-mono font-bold text-slate-400 text-sm mt-1">{ev.gameMinute}'</div>
-                                    <div>
-                                        <span className="text-[10px] font-black bg-white/50 px-2 py-0.5 rounded uppercase border border-black/5">
-                                            {ev.type.replace(/_/g, ' ')}
-                                        </span>
-                                        <p className="text-slate-800 font-bold mt-1 text-lg leading-snug">
-                                            {ev.description}
-                                        </p>
-                                    </div>
+                    {eventsLog.length > 0 ? (
+                        eventsLog.map((ev, idx) => (
+                            <div key={idx} className={`p-4 rounded-xl shadow-sm border-l-4 flex items-start gap-4 animate-in slide-in-from-top-2 ${ev.style}`}>
+                                <div className="font-mono font-bold text-slate-400 text-sm mt-1">{ev.gameMinute}'</div>
+                                <div>
+                                    <span className="text-[10px] font-black bg-white/50 px-2 py-0.5 rounded uppercase border border-black/5">
+                                        {ev.type.replace(/_/g, ' ')}
+                                    </span>
+                                    <p className="text-slate-800 font-bold mt-1 text-lg leading-snug">
+                                        {ev.description}
+                                    </p>
                                 </div>
-                            ))}
-                        </>
-                    ) : (
-                        // PRE-MATCH PANEL
-                        <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 shadow-sm">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-                                {isSimulating ? (
-                                    <Loader2 className="animate-spin text-indigo-600" size={32} />
-                                ) : (
-                                    <Timer className="text-slate-400" size={32} />
-                                )}
                             </div>
+                        ))
+                    ) : (
+                        !isMatchEnded && (
+                            <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                                    <Timer className="text-slate-400" size={32} />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">
+                                    Match Scheduled
+                                </h3>
+                                <p className="text-slate-500 font-medium mt-2 max-w-xs mx-auto mb-8">
+                                    Waiting for kickoff.
+                                </p>
+                            </div>
+                        )
+                    )}
 
-                            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">
-                                Match Scheduled
-                            </h3>
-
-                            <p className="text-slate-500 font-medium mt-2 max-w-xs mx-auto mb-8">
-                                The players are warming up on the pitch. <br/>
-                                Waiting for kickoff.
-                            </p>
-
-                            {/* CONDIZIONI PER MOSTRARE IL BOTTONE:
-                                1. Deve essere Manager
-                                2. La partita NON deve essere iniziata (!isStarted)
-                                3. La partita NON deve essere finita (!isMatchEnded)
-                            */}
-                            {isManager() && !isMatchEnded && (
+                    {/* MANAGER ZONE */}
+                    {isManager() && (
+                        <div className="mt-8 pt-6 border-t border-slate-200">
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
+                                <div>
+                                    <h4 className="text-sm font-black text-slate-700 uppercase tracking-wide">Manager Zone</h4>
+                                    <p className="text-xs text-slate-500">
+                                        {isMatchEnded ? "Match finished. Restart simulation?" : "Control the match."}
+                                    </p>
+                                </div>
                                 <Button
                                     onClick={handleStartSimulation}
                                     disabled={isSimulating}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all uppercase tracking-widest gap-2"
+                                    className={`${isMatchEnded ? "bg-orange-500 hover:bg-orange-600" : "bg-indigo-600 hover:bg-indigo-700"} text-white font-bold px-6 py-2 rounded-full shadow-md uppercase tracking-widest gap-2 flex items-center`}
                                 >
-                                    {isSimulating ? "Starting..." : <><Play size={20} fill="currentColor" /> Simulate Match</>}
+                                    {isSimulating ? "Starting..." : (
+                                        <>
+                                            {isMatchEnded ? <RefreshCw size={16} /> : <Play size={16} fill="currentColor" />}
+                                            {isMatchEnded ? "Re-Simulate" : "Start Simulation"}
+                                        </>
+                                    )}
                                 </Button>
-                            )}
-
-                            {/* Se è manager ma la partita è finita */}
-                            {isManager() && isMatchEnded && (
-                                <p className="text-sm font-bold text-red-400 bg-red-50 px-4 py-2 rounded-full inline-flex items-center gap-2">
-                                    <Ban size={16}/> Simulation Disabled (Match Ended)
-                                </p>
-                            )}
-
-                            {!isManager() && !isMatchEnded && (
-                                <p className="text-xs text-slate-400 font-medium bg-slate-50 inline-block px-3 py-1 rounded-full">
-                                    Official start pending
-                                </p>
-                            )}
+                            </div>
                         </div>
                     )}
                 </div>
