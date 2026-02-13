@@ -7,7 +7,7 @@ import {
     useNavigate,
     Link
 } from 'react-router-dom';
-import { Box, Container, Typography, Paper, Divider, AppBar, Toolbar, Button } from '@mui/material';
+import { Box, Container, Typography, Paper, Divider, AppBar, Toolbar, Button, CircularProgress } from '@mui/material';
 
 // Importing your components
 import Home from './components/Home';
@@ -37,6 +37,7 @@ import MatchManagement from './components/matches/MatchManagement';
 
 function App() {
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true); // Aggiunto per gestire il caricamento iniziale
 
     useEffect(() => {
         const loggedInUser = localStorage.getItem('user');
@@ -45,8 +46,10 @@ function App() {
                 setUser(JSON.parse(loggedInUser));
             } catch (error) {
                 console.error("Error loading user data", error);
+                localStorage.removeItem('user'); // Pulisce se il JSON è corrotto
             }
         }
+        setLoading(false);
     }, []);
 
     const handleLogout = () => {
@@ -54,15 +57,12 @@ function App() {
         setUser(null);
     };
 
-    // --- FUNZIONE BLINDATA PER I RUOLI ---
     const hasRequiredRole = (requiredRole) => {
         if (!user || !user.roles) return false;
-
-        // Gestiamo sia array che singolo oggetto/stringa
         const rolesToCheck = Array.isArray(user.roles) ? user.roles : [user.roles];
 
         return rolesToCheck.some(r => {
-            // Estraiamo la stringa sia che r sia un oggetto {roleName: '...'} sia che sia una stringa
+            if (!r) return false;
             const rName = typeof r === 'object' ? (r.roleName || r.authority || r.name) : r;
             return rName === requiredRole;
         });
@@ -94,7 +94,7 @@ function App() {
                         <>
                             <Button color="inherit" component={Link} to="/dashboard">Profile</Button>
                             <Typography variant="body2" sx={{ ml: 2, mr: 2, fontStyle: 'italic', borderLeft: '1px solid white', pl: 2 }}>
-                                {user.email}
+                                {user?.email}
                             </Typography>
                             <Button variant="outlined" color="inherit" onClick={handleLogout} sx={{ borderColor: 'rgba(255,255,255,0.5)' }}>
                                 Logout
@@ -113,13 +113,20 @@ function App() {
         );
     };
 
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
     return (
         <Router>
             <Box sx={{ flexGrow: 1, backgroundColor: '#f4f4f4', minHeight: '100vh' }}>
                 <GlobalNavbar />
 
                 <Routes>
-                    {/* Public Routes */}
                     <Route path="/" element={<Home />} />
                     <Route path="/tournaments" element={<Tournaments />} />
                     <Route path="/live" element={<LiveMatch />} />
@@ -130,10 +137,9 @@ function App() {
                     <Route path="/officials" element={<OfficialManagement />} />
                     <Route path="/stadiums" element={<StadiumPage />} />
                     <Route path="/matches" element={<MatchManagement />} />
-
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/activate-account" element={<ResetPassword />} /> {/* Verifica se deve essere ActivationPage */}
+                    <Route path="/activate-account" element={<ResetPassword />} />
 
                     <Route
                         path="/login"
@@ -144,7 +150,6 @@ function App() {
                         element={!user ? <Register onRegisterSuccess={(userData) => setUser(userData)} /> : <Navigate replace to="/dashboard" />}
                     />
 
-                    {/* Protected Routes */}
                     <Route
                         path="/dashboard"
                         element={user ? <DashboardHome user={user} /> : <Navigate replace to="/login" />}
@@ -158,64 +163,27 @@ function App() {
                     {/* Admin / Manager Routes */}
                     <Route
                         path="/admin/reservations"
-                        element={
-                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER')
-                                ? <AdminReservations />
-                                : <Navigate to="/dashboard" replace />
-                        }
+                        element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <AdminReservations /> : <Navigate to="/dashboard" replace />}
                     />
 
                     <Route
                         path="/stadiums/create"
-                        element={
-                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER')
-                                ? (
-                                    <Container maxWidth="sm" sx={{ mt: 8 }}>
-                                        <CreateStadium />
-                                    </Container>
-                                )
-                                : <Navigate replace to="/stadiums" />
-                        }
+                        element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <Container maxWidth="sm" sx={{ mt: 8 }}><CreateStadium /></Container> : <Navigate replace to="/stadiums" />}
                     />
 
                     <Route
                         path="/player/create"
-                        element={
-                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER')
-                                ? (
-                                    <Container maxWidth="sm" sx={{ mt: 8 }}>
-                                        <PlayerForm />
-                                    </Container>
-                                )
-                                : <Navigate replace to="/players" />
-                        }
+                        element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <Container maxWidth="sm" sx={{ mt: 8 }}><PlayerForm /></Container> : <Navigate replace to="/players" />}
                     />
 
                     <Route
                         path="/official/create"
-                        element={
-                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER')
-                                ? (
-                                    <Container maxWidth="sm" sx={{ mt: 8 }}>
-                                        {/* Nota: Qui usavi PlayerForm, assicurati sia corretto o usa OfficialForm */}
-                                        <PlayerForm />
-                                    </Container>
-                                )
-                                : <Navigate replace to="/officials" />
-                        }
+                        element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <Container maxWidth="sm" sx={{ mt: 8 }}><PlayerForm /></Container> : <Navigate replace to="/officials" />}
                     />
 
                     <Route
                         path="/matches/create"
-                        element={
-                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER')
-                                ? (
-                                    <Container maxWidth="sm" sx={{ mt: 8 }}>
-                                        <MatchForm />
-                                    </Container>
-                                )
-                                : <Navigate replace to="/matches" />
-                        }
+                        element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <Container maxWidth="sm" sx={{ mt: 8 }}><MatchForm /></Container> : <Navigate replace to="/matches" />}
                     />
 
                     <Route
@@ -230,17 +198,12 @@ function App() {
 
                     <Route
                         path="/teams/edit/:id"
-                        element={
-                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER') || hasRequiredRole('ROLE_TEAM_MANAGER') ? <CreateTeam /> : <Navigate replace to="/teams" />}
+                        element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') || hasRequiredRole('ROLE_TEAM_MANAGER') ? <CreateTeam /> : <Navigate replace to="/teams" />}
                     />
 
                     <Route
                         path="/tournaments/:tournamentId/match/:matchId/assign"
-                        element={
-                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER')
-                                ? <AssignTeams />
-                                : <Navigate to="/tournaments" replace />
-                        }
+                        element={hasRequiredRole('ROLE_ORGANIZATION_MANAGER') ? <AssignTeams /> : <Navigate to="/tournaments" replace />}
                     />
 
                     <Route
@@ -258,27 +221,29 @@ function App() {
 // --- SUPPORT COMPONENTS ---
 
 function DashboardHome({ user }) {
-    // Helper per stampare il ruolo senza crashare
     const getRoleLabel = () => {
-        if (!user || !user.roles || user.roles.length === 0) return 'User';
+        if (!user?.roles || user.roles.length === 0) return 'User';
         const roleObj = user.roles[0];
-        const roleString = typeof roleObj === 'object' ? roleObj.roleName : roleObj;
-        return roleString ? roleString.replace('ROLE_', '').replace(/_/g, ' ') : '';
+        const roleString = typeof roleObj === 'object' ? (roleObj.roleName || roleObj.authority) : roleObj;
+        return roleString ? roleString.replace('ROLE_', '').replace(/_/g, ' ') : 'User';
     };
+
+    // Fallback se user viene perso durante il render
+    if (!user) return null;
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4 }}>
             <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
                 <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>Dashboard</Typography>
-                <Typography>Welcome back, <strong>{user.name}</strong>!</Typography>
+                <Typography>Welcome back, <strong>{user?.name || 'User'}</strong>!</Typography>
 
-                {/* Usiamo la funzione helper invece di user.role diretto */}
                 <Typography variant="body2" color="textSecondary">
                     Role: <strong>{getRoleLabel()}</strong>
                 </Typography>
             </Paper>
             <Divider sx={{ my: 4 }}>YOUR PROFILE</Divider>
-            <Profile user={user} />
+            {/* Protezione extra per il componente Profile */}
+            {user && <Profile user={user} />}
         </Container>
     );
 }

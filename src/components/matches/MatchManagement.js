@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from "react";
 import matchService from "../../services/matchService"; 
 import teamService from "../../services/teamService"; 
+import reservationService from "../../services/reservationService"; 
 import { hasRole } from "../../services/authService";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
-import { Plus, Trash2, Loader2, Calendar, Edit } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "../ui/dialog";
+import { Plus, Trash2, Loader2, Calendar, Edit, Ticket } from "lucide-react"; 
 import MatchForm from "./MatchForm"; 
 
 export default function MatchManagement() {
   const [matches, setMatches] = useState([]);
   const [teams, setTeams] = useState({}); 
   const [loading, setLoading] = useState(true);
+  
+  // Match Management states (Manager)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
+
+  // Reservation states (User)
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [reservationId, setReservationId] = useState(null);
 
   const isManager = hasRole('ROLE_ORGANIZATION_MANAGER');
 
@@ -31,27 +40,67 @@ export default function MatchManagement() {
       setTeams(teamMap);
       setMatches(matchData);
     } catch (err) {
-      console.error("Errore nel caricamento dati", err);
+      console.error("Error loading data", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { fetchData(); }, []);
+
   const handleDelete = async (id) => {
-    if (window.confirm("Sei sicuro di voler eliminare questo match?")) {
+    if (window.confirm("Are you sure you want to delete this match?")) {
       try {
         await matchService.deleteMatch(id);
-        fetchData();
+        fetchData(); 
       } catch (err) {
-        alert("Errore durante l'eliminazione.");
+        console.error("Deletion error:", err);
+        alert("Error during deletion.");
       }
     }
   };
 
+  const handleBooking = async () => {
+    setBookingLoading(true);
+    try {
+      const userData = localStorage.getItem('user');
+      const user = userData ? JSON.parse(userData) : null;
+
+      if (!user?.id) {
+        alert("You must be logged in to make a reservation.");
+        return;
+      }
+      
+      // Payload matching ReservationEntity.java
+      const data = {
+        userId: Number(user.id),
+        matchId: Number(selectedMatch.id),
+        seatNumber: "Standard" 
+      };
+
+      const result = await reservationService.createReservation(data);
+      setReservationId(result.id);
+    } catch (error) {
+      const serverMessage = error.response?.data?.message || "";
+      const isMailError = serverMessage.toLowerCase().includes("mail");
+
+      // Handle cases where DB save succeeds but Mail service fails
+      if (error.response?.status === 500 && isMailError) {
+        console.warn("Reservation saved in DB, but email delivery failed.");
+        setReservationId("SUCCESS_DB"); 
+        alert("Reservation recorded! A technical error occurred while sending the confirmation email, but your seat is reserved.");
+      } else {
+        console.error("Booking error:", error.response?.data || error.message);
+        alert("An error occurred during the booking process: " + (error.response?.data?.error || "Server Error"));
+      }
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
   const today = new Date().toISOString().split('T')[0];
-  const upcomingMatches = matches.filter(m => m.date >= today); // future matches
-  const pastMatches = matches.filter(m => m.date < today);    // finished matches
+  const upcomingMatches = matches.filter(m => m.date >= today);
+  const pastMatches = matches.filter(m => m.date < today);
 
   const MatchCard = ({ match, isPast }) => (
     <Card className={`bg-white border-none shadow-md border-t-4 ${isPast ? 'border-slate-300' : 'border-indigo-600'}`}>
@@ -78,6 +127,21 @@ export default function MatchManagement() {
           <span className="px-4 text-indigo-600 text-xs font-bold">VS</span>
           <span className="flex-1 text-right">{teams[match.awayTeamId] || "TBD"}</span>
         </div>
+
+        {!isPast && (
+          <div className="mt-6">
+            <Button 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-[10px] tracking-widest"
+              onClick={() => {
+                setReservationId(null);
+                setSelectedMatch(match);
+                setIsBookingOpen(true);
+              }}
+            >
+              <Ticket size={14} className="mr-2" /> Book Now
+            </Button>
+          </div>
+        )}
 
         {isPast && (
           <div className="mt-4 pt-4 border-t border-slate-50 flex justify-center">
@@ -115,6 +179,7 @@ export default function MatchManagement() {
                    <DialogTitle className="uppercase italic font-bold text-indigo-900">
                      {editingMatch ? "Edit Match" : "Schedule Match"}
                    </DialogTitle>
+                   <DialogDescription>Enter the match details for the tournament.</DialogDescription>
                 </DialogHeader>
                 <MatchForm initialData={editingMatch} onSuccess={() => { setIsDialogOpen(false); fetchData(); }} />
               </DialogContent>
@@ -135,6 +200,49 @@ export default function MatchManagement() {
             {pastMatches.map(m => <MatchCard key={m.id} match={m} isPast={true} />)}
           </div>
         </section>
+
+        <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
+          <DialogContent className="bg-white max-w-md">
+            <DialogHeader>
+              <DialogTitle className="uppercase italic font-black text-blue-600 tracking-tighter text-2xl">
+                {reservationId ? "Booking Confirmed" : "Confirm Booking"}
+              </DialogTitle>
+              <DialogDescription>
+                You are about to book a seat for this event.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {!reservationId ? (
+              <div className="space-y-6 pt-4">
+                <div className="flex justify-between items-center text-slate-800 font-bold uppercase text-sm border-b pb-4">
+                  <span>{teams[selectedMatch?.homeTeamId]}</span>
+                  <span className="text-blue-600 italic">VS</span>
+                  <span>{teams[selectedMatch?.awayTeamId]}</span>
+                </div>
+                <Button 
+                  onClick={handleBooking} 
+                  disabled={bookingLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase py-6"
+                >
+                  {bookingLoading ? <Loader2 className="animate-spin mr-2" /> : "Confirm Reservation"}
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center space-y-4 py-6">
+                <div className="bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Ticket size={32} />
+                </div>
+                <p className="text-slate-600 font-medium">Show this code at the ticket office:</p>
+                <div className="bg-slate-100 p-4 rounded-lg font-mono text-3xl font-black text-blue-600 border-2 border-dashed border-blue-200">
+                  #{reservationId}
+                </div>
+                <Button onClick={() => setIsBookingOpen(false)} className="w-full bg-slate-900 mt-4 uppercase font-bold">
+                  Got it
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
