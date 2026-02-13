@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Trophy, Calendar, MapPin, ChevronLeft, Plus, Ticket, Trash2 } from "lucide-react";
+import { Trophy, Calendar, MapPin, ChevronLeft, Plus, Ticket, Trash2, Loader2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import tournamentService from '../../services/tournamentService';
 
@@ -9,128 +9,147 @@ const Tournaments = () => {
   const [tournaments, setTournaments] = useState([]); 
   const [selectedBracket, setSelectedBracket] = useState(null); 
   const [loading, setLoading] = useState(true);
+  const [loadingBracket, setLoadingBracket] = useState(false); // Added to manage bracket loading state
   const navigate = useNavigate();
 
   // Get user data from localStorage to check roles
   const user = JSON.parse(localStorage.getItem('user'));
-  
-  // MODIFICA: Controllo coerenza con app.js (usa .roles array invece di .role string)
   const isOrganizer = user?.roles?.includes('ROLE_ORGANIZATION_MANAGER');
 
-    useEffect(() => {
-        // SOSTITUITO: Chiamata reale al backend
-        const fetchTournaments = async () => {
-            try {
-                const data = await tournamentService.getAllTournaments();
-                setTournaments(data);
-            } catch (err) {
-                console.error("Error fetching tournaments", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchTournaments();
-    }, []);
+  useEffect(() => {
+    fetchTournaments();
+  }, []);
 
-    const handleDeleteTournament = async (e, id) => {
-        e.stopPropagation(); // Evita che il click apra il bracket
-        if (window.confirm("Sei sicuro di voler eliminare questo torneo e tutti i match associati?")) {
-            try {
-                await tournamentService.deleteTournament(id);
-                setTournaments(tournaments.filter(t => t.id !== id));
-            } catch (err) {
-                console.error("Error deleting tournament", err);
-                alert("Impossibile eliminare il torneo. Riprova più tardi.");
-            }
-        }
-    };
+  const fetchTournaments = async () => {
+    try {
+      const data = await tournamentService.getAllTournaments();
+      setTournaments(data);
+    } catch (err) {
+      console.error("Error fetching tournaments", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleSelectTournament = async (id) => {
-        setLoading(true);
-        try {
-            // Nota: Il tuo backend ritorna i match con /tournaments/{id}/matches
-            const matches = await tournamentService.getMatchesTournamentId(id);
+  // function to group matches by round
+  const formatMatchesToRounds = (matches) => {
+    if (!matches || matches.length === 0) return [];
+    
+    const roundsMap = matches.reduce((acc, match) => {
+      const r = match.round || 1; 
+      if (!acc[r]) acc[r] = [];
+      
+      acc[r].push({
+        id: match.id,
+        teamA: match.homeTeamName || "TBD",
+        teamB: match.awayTeamName || "TBD",
+        scoreA: match.homeScore,
+        scoreB: match.awayScore,
+        winner: match.winnerTeamId,
+        fullMatchData: match 
+      });
+      return acc;
+    }, {});
 
-            // Funzione per raggruppare i match in round per il bracket
-            const organizedBracket = organizeMatchesIntoRounds(matches);
-            setSelectedBracket(organizedBracket);
-        } catch (err) {
-            console.error("Error fetching matches", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Sort rounds and return as array of arrays
+    return Object.keys(roundsMap)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(key => roundsMap[key]);
+  };
 
-    const organizeMatchesIntoRounds = (matches) => {
-        const rounds = [];
-        if (!matches || matches.length === 0) return [];
+  const handleSelectTournament = async (tournament) => {
+    setLoadingBracket(true); // Start loading specifically for the bracket
+    try {
+      // backend returns matches via /tournaments/{id}/matches
+      const matches = await tournamentService.getMatchesTournamentId(tournament.id);
 
-        matches.forEach(m => {
-            const rIndex = m.round;
-            if (!rounds[rIndex]) rounds[rIndex] = [];
-            rounds[rIndex].push(m);
-        });
+      // function to group matches by round for the bracket
+      const rounds = formatMatchesToRounds(matches);
+      
+      // Setting selected bracket with formatted rounds
+      setSelectedBracket({ ...tournament, rounds });
+    } catch (err) {
+        console.error("Error fetching matches", err);
+    } finally {
+        setLoadingBracket(false);
+    }
+  };
 
-        rounds.forEach(round => {
-            round.sort((a, b) => a.bracketIndex - b.bracketIndex);
-        });
-
-        return rounds;
-    };
+  const handleDeleteTournament = async (e, id) => {
+      e.stopPropagation(); 
+      if (window.confirm("Are you sure you want to delete this tournament and all associated matches?")) {
+          try {
+              await tournamentService.deleteTournament(id);
+              setTournaments(tournaments.filter(t => t.id !== id));
+          } catch (err) {
+              console.error("Error deleting tournament", err);
+              alert("Unable to delete tournament. Try again later.");
+          }
+      }
+  };
 
   const handleMatchClick = (match) => {
     if (!match.teamA || !match.teamB) return; 
 
+    // Sync navigation with App.js routes
     if (isOrganizer) {
-      navigate(`/tournaments/match/${match.id}/edit`, { state: { match } });
+      navigate(`/tournaments/match-editor/${match.id}`, { state: { match: match.fullMatchData } });
     } 
     else {
-      navigate('/reservation', { state: { match } });
+      navigate('/reservation', { state: { match: match.fullMatchData } });
     }
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center font-bold text-blue-600">Loading...</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center font-bold text-blue-600 uppercase italic">Loading Tournaments...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-7xl mx-auto">
         
         {selectedBracket ? (
+          /* --- VIEW B: BRACKET VIEW --- */
           <div>
             <Button 
               variant="ghost" 
-              className="mb-6 flex items-center gap-2 text-slate-600 hover:text-blue-600" 
+              className="mb-6 flex items-center gap-2 text-slate-600 hover:text-blue-600 font-bold" 
               onClick={() => setSelectedBracket(null)}
             >
               <ChevronLeft size={20} /> Back to Tournaments
             </Button>
             
             <h1 className="text-4xl font-black text-slate-900 mb-10 uppercase italic tracking-tighter">
-              Tournament <span className="text-blue-600">Bracket</span>
+              {selectedBracket.name} <span className="text-blue-600">Bracket</span>
             </h1>
 
-            <div className="flex gap-12 overflow-x-auto pb-10 custom-scrollbar">
-              {selectedBracket.length > 0 ? (
-                selectedBracket.map((roundMatches, roundIndex) => (
-                  <div key={roundIndex} className="flex flex-col justify-around gap-8 min-w-[250px]">
-                    <h3 className="text-center font-bold text-slate-400 uppercase text-xs tracking-widest border-b pb-2">
-                      {getRoundName(roundIndex, selectedBracket.length)}
-                    </h3>
-                    {roundMatches.map((match, mIdx) => (
-                      <MatchCard 
-                        key={mIdx} 
-                        match={match} 
-                        onClick={() => handleMatchClick(match)} 
-                      />
-                    ))}
+            {loadingBracket ? (
+              <div className="flex flex-col items-center py-20 text-slate-400">
+                <Loader2 className="animate-spin mb-2" size={40} />
+                <p className="italic font-medium">Fetching match data...</p>
+              </div>
+            ) : (
+              <div className="flex gap-12 overflow-x-auto pb-10 custom-scrollbar">
+                {selectedBracket.rounds && selectedBracket.rounds.length > 0 ? (
+                  selectedBracket.rounds.map((roundMatches, roundIndex) => (
+                    <div key={roundIndex} className="flex flex-col justify-around gap-8 min-w-[250px]">
+                      <h3 className="text-center font-bold text-slate-400 uppercase text-xs tracking-widest border-b pb-2">
+                        {getRoundName(roundIndex, selectedBracket.rounds.length)}
+                      </h3>
+                      {roundMatches.map((match) => (
+                        <MatchCard 
+                          key={match.id} 
+                          match={match} 
+                          onClick={() => handleMatchClick(match)} 
+                        />
+                      ))}
+                    </div>
+                  ))
+                ) : (
+                  <div className="w-full text-center py-20 text-slate-400 italic font-medium">
+                    No matches found for this tournament.
                   </div>
-                ))
-              ) : (
-                <div className="w-full text-center py-20 text-slate-400 italic">
-                  No bracket generated for this tournament yet.
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           /* --- VIEW A: TOURNAMENTS LIST --- */
@@ -143,7 +162,7 @@ const Tournaments = () => {
               {isOrganizer && (
                 <Button 
                   onClick={() => navigate('/tournaments/create')}
-                  className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 shadow-lg"
+                  className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 shadow-lg font-bold"
                 >
                   <Plus size={18} /> Create Tournament
                 </Button>
@@ -152,7 +171,7 @@ const Tournaments = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {tournaments.map((t) => (
-                <Card key={t.id} className="hover:border-blue-500 transition-all cursor-pointer group shadow-md bg-white relative overflow-hidden">
+                <Card key={t.id} className="hover:border-blue-500 transition-all cursor-pointer group shadow-md bg-white relative overflow-hidden border-2">
                   <CardHeader className="flex flex-row items-start justify-between">
                     <CardTitle className="text-xl font-bold group-hover:text-blue-600 transition-colors uppercase italic pr-8">
                         {t.name}
@@ -169,15 +188,15 @@ const Tournaments = () => {
                     )}
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                    <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
                       <Calendar size={16} /> {t.startDate || "Date TBD"}
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                    <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
                       <MapPin size={16} /> {t.location || "Location TBD"}
                     </div>
                     <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 mt-4 font-bold"
-                      onClick={() => handleSelectTournament(t.id)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 mt-4 font-bold uppercase italic tracking-tight"
+                      onClick={() => handleSelectTournament(t)} // FIX: passed the whole object 't'
                     >
                       View Bracket
                     </Button>
@@ -191,7 +210,6 @@ const Tournaments = () => {
     </div>
   );
 };
-
 
 const MatchCard = ({ match, onClick }) => {
   const isTBD = !match.teamA || !match.teamB;
@@ -208,12 +226,12 @@ const MatchCard = ({ match, onClick }) => {
           </div>
         )}
         
-        <div className={`flex justify-between items-center ${match.winner === match.teamA ? "font-bold text-blue-700" : "text-slate-600"}`}>
+        <div className={`flex justify-between items-center ${match.winner === match.teamA ? "font-bold text-blue-700 underline" : "text-slate-600"}`}>
           <span className="truncate pr-2">{match.teamA || "TBD"}</span>
           <span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-sm">{match.scoreA ?? "-"}</span>
         </div>
         
-        <div className={`flex justify-between items-center ${match.winner === match.teamB ? "font-bold text-blue-700" : "text-slate-600"}`}>
+        <div className={`flex justify-between items-center ${match.winner === match.teamB ? "font-bold text-blue-700 underline" : "text-slate-600"}`}>
           <span className="truncate pr-2">{match.teamB || "TBD"}</span>
           <span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-sm">{match.scoreB ?? "-"}</span>
         </div>
@@ -234,17 +252,5 @@ const getRoundName = (index, total) => {
   if (index === total - 3) return "Quarter-Finals";
   return `Round ${index + 1}`;
 };
-
-const MOCK_BRACKET = [
-  // Round 1 (Semi-Finals)
-  [
-    { id: 101, teamA: "Gryffindor", teamB: "Slytherin", scoreA: 150, scoreB: 40, winner: "Gryffindor", date: "2024-06-01", stadiumName: "Hogwarts Arena", stadiumId: 1 },
-    { id: 102, teamA: "Ravenclaw", teamB: "Hufflepuff", scoreA: 70, scoreB: 120, winner: "Hufflepuff", date: "2024-06-02", stadiumName: "Quidditch Pitch", stadiumId: 2 }
-  ],
-  // Round 2 (Final)
-  [
-    { id: 103, teamA: "Gryffindor", teamB: "Hufflepuff", scoreA: null, scoreB: null, date: "2024-06-10", stadiumName: "Grand Stadium", stadiumId: 3 }
-  ]
-];
 
 export default Tournaments;

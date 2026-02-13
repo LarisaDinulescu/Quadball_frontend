@@ -123,13 +123,18 @@ const tournamentService = {
 
     // GET /tournaments/{id}/matches
     getMatchesTournamentId: async (tournamentId) => {
-        try{
+        try {
             const response = await api.get(`/tournaments/${tournamentId}/matches`);
-            return response.data;
-        }catch (error) {
-            console.error(`Error getting tournament matches`, error);
+            return response.data; 
+        } catch (error) {
+            console.error(`Error getting matches for tournament ${tournamentId}`, error);
             throw error;
         }
+    },
+
+    generateBracket: async (id) => {
+        const response = await api.post(`/tournaments/${id}/generate-bracket`);
+        return response.data;
     },
 
     // Recupera i dettagli tecnici di un match (punteggi, squadre, ecc)

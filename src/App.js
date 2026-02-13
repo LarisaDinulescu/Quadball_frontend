@@ -16,7 +16,6 @@ import Register from './components/auth/Register';
 import Profile from './components/auth/Profile';
 import PlayerManagement from './components/players/PlayerManagement';
 import PlayerForm from "./components/players/PlayerForm";
-import OfficialForm from './components/matchOfficial/OfficialForm'; // Assumendo che esista o sia usato PlayerForm
 import OfficialManagement from './components/matchOfficial/OfficialManagement';
 import LiveMatch from './components/live/LiveMatch';
 import MatchDetail from './components/live/MatchDetail';
@@ -33,6 +32,8 @@ import CreateStadium from "./components/stadiums/StadiumForm";
 import AdminReservations from './components/booking/AdminReservations';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
+import MatchForm from './components/matches/MatchForm';
+import MatchManagement from './components/matches/MatchManagement';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -85,6 +86,7 @@ function App() {
                     <Button color="inherit" component={Link} to="/players">Players</Button>
                     <Button color="inherit" component={Link} to="/officials">Officials</Button>
                     <Button color="inherit" component={Link} to="/stadiums">Stadiums</Button>
+                    <Button color="inherit" component={Link} to="/matches">Matches</Button>
                     <Button color="inherit" component={Link} to="/tournaments">Tournaments</Button>
                     <Button color="inherit" component={Link} to="/live">Live</Button>
 
@@ -127,6 +129,7 @@ function App() {
                     <Route path="/players" element={<PlayerManagement />} />
                     <Route path="/officials" element={<OfficialManagement />} />
                     <Route path="/stadiums" element={<StadiumPage />} />
+                    <Route path="/matches" element={<MatchManagement />} />
 
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
@@ -199,6 +202,19 @@ function App() {
                                     </Container>
                                 )
                                 : <Navigate replace to="/officials" />
+                        }
+                    />
+
+                    <Route
+                        path="/matches/create"
+                        element={
+                            hasRequiredRole('ROLE_ORGANIZATION_MANAGER')
+                                ? (
+                                    <Container maxWidth="sm" sx={{ mt: 8 }}>
+                                        <MatchForm />
+                                    </Container>
+                                )
+                                : <Navigate replace to="/matches" />
                         }
                     />
 
