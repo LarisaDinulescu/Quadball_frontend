@@ -128,9 +128,9 @@ export default function MatchManagement() {
           <span className="flex-1 text-right">{teams[match.awayTeamId] || "TBD"}</span>
         </div>
 
-        {!isPast && (
+          {!isPast && (
           <div className="mt-6">
-            <Button 
+            <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-[10px] tracking-widest"
               onClick={() => {
                 setReservationId(null);
@@ -169,11 +169,11 @@ export default function MatchManagement() {
           <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">Matches</h1>
           {isManager && (
             <Dialog open={isDialogOpen} onOpenChange={(v) => { setIsDialogOpen(v); if(!v) setEditingMatch(null); }}>
-              <DialogTrigger asChild>
-                <Button className="bg-indigo-600 text-white font-bold shadow-lg">
+                {/*<DialogTrigger asChild>
+                  <Button className="bg-indigo-600 text-white font-bold shadow-lg">
                   <Plus size={20} className="mr-2"/> New Match
                 </Button>
-              </DialogTrigger>
+              </DialogTrigger>*/}
               <DialogContent className="bg-white">
                 <DialogHeader>
                    <DialogTitle className="uppercase italic font-bold text-indigo-900">

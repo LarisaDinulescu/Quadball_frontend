@@ -1,18 +1,15 @@
 import api from './api';
 
 const tournamentService = {
-  /**
-   * Retrieves the list of all tournaments
-   */
-  getAllTournaments: async () => {
-    try {
-      const response = await api.get('/tournaments');
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching tournaments:", error);
-      throw error;
-    }
-  },
+    getAllTournaments: async () => {
+        try {
+            const response = await api.get('/tournaments');
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching tournaments:", error);
+            throw error;
+        }
+    },
 
     getTournamentById: async (id) => {
         try {
@@ -24,32 +21,15 @@ const tournamentService = {
         }
     },
 
-  /**
-   * Retrieves the tournament bracket (list of lists of matches)
-   */
-  /*getTournamentBracket: async (id) => {
-    try {
-      const response = await api.get(`/tournaments/${id}/bracket`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching bracket for tournament ${id}:`, error);
-      throw error;
-    }
-  },*/
-
-  /**
-   * Creates a new tournament
-   * Only accessible by ROLE_ORGANIZATION_MANAGER
-   */
-  createTournament: async (tournamentData) => {
-    try {
-      const response = await api.post('/tournaments', tournamentData);
-      return response.data;
-    } catch (error) {
-      console.error("Error during tournament creation:", error.response?.data || error.message);
-      throw error;
-    }
-  },
+    createTournament: async (tournamentData) => {
+        try {
+            const response = await api.post('/tournaments', tournamentData);
+            return response.data;
+        } catch (error) {
+            console.error("Error during tournament creation:", error.response?.data || error.message);
+            throw error;
+        }
+    },
 
     updateTournament: async (id, tournamentData) => {
         try {
@@ -61,20 +41,16 @@ const tournamentService = {
         }
     },
 
-  /**
-   * Deletes a tournament
-   */
-  deleteTournament: async (id) => {
-    try {
-      const response = await api.delete(`/tournaments/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error deleting tournament ${id}:`, error);
-      throw error;
-    }
-  },
+    deleteTournament: async (id) => {
+        try {
+            const response = await api.delete(`/tournaments/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error deleting tournament ${id}:`, error);
+            throw error;
+        }
+    },
 
-// GET /tournaments/{id}/teams (Ritorna la lista degli ID dei team)
     getTeamsTorunamentId: async (tournamentId) => {
         try {
             const response = await api.get(`/tournaments/${tournamentId}/teams`);
@@ -85,30 +61,25 @@ const tournamentService = {
         }
     },
 
-    // POST /tournaments/{tournamentId}/teams/{teamId}
     addTeam: async (tournamentId, teamId) => {
         try {
             const response = await api.post(`/tournaments/${tournamentId}/teams/${teamId}`);
             return response.data;
-        }catch (error) {
+        } catch (error) {
             console.error(`Error adding team to tournament`, error);
             throw error;
         }
     },
 
-    // DELETE /tournaments/{tournamentId}/teams/{teamId}
     deleteTeamFromTournament: async (tournamentId, teamId) => {
         try{
             await api.delete(`/tournaments/${tournamentId}/teams/${teamId}`);
-        }catch (error) {
+        } catch (error) {
             console.error(`Error removing team from tournament`, error);
             throw error;
         }
     },
 
-    /**
-     * Triggers the bracket generation for a tournament
-     */
     generateBracket: async (id) => {
         try {
             const response = await api.post(`/tournaments/${id}/generate-bracket`);
@@ -121,37 +92,68 @@ const tournamentService = {
 
     // --- GESTIONE MATCH NEL TORNEO ---
 
-    // GET /tournaments/{id}/matches
     getMatchesTournamentId: async (tournamentId) => {
         try {
             const response = await api.get(`/tournaments/${tournamentId}/matches`);
-            return response.data; 
+            return response.data;
         } catch (error) {
             console.error(`Error getting matches for tournament ${tournamentId}`, error);
             throw error;
         }
     },
 
-    generateBracket: async (id) => {
-        const response = await api.post(`/tournaments/${id}/generate-bracket`);
-        return response.data;
+    // 🌟 NUOVO METODO: Scarica il tabellone E incrocia i dati con Squadre e Punteggi!
+    getEnrichedTournamentMatches: async (tournamentId) => {
+        try {
+            // 1. Prende la struttura del tabellone
+            const bracketRes = await api.get(`/tournaments/${tournamentId}/matches`);
+            const rawMatches = bracketRes.data || [];
+
+            // 2. Prende tutti i match (per avere punteggi e ID squadre)
+            const matchesRes = await api.get('/matches');
+            const allMatches = matchesRes.data || [];
+
+            // 3. Prende tutti i team (per avere i nomi veri)
+            const teamsRes = await api.get('/teams');
+            const allTeams = teamsRes.data || [];
+
+            // Mappa veloce per i nomi delle squadre
+            const teamsMap = {};
+            allTeams.forEach(t => teamsMap[t.id] = t.name);
+
+            // 4. Unisce tutto insieme
+            return rawMatches.map(tournamentMatch => {
+                const actualMatch = allMatches.find(m => m.id === tournamentMatch.matchId);
+                if (actualMatch) {
+                    return {
+                        ...tournamentMatch, // Tiene round, bracketIndex, ecc.
+                        homeTeamId: actualMatch.homeTeamId,
+                        awayTeamId: actualMatch.awayTeamId,
+                        homeTeamName: teamsMap[actualMatch.homeTeamId] || "TBA",
+                        awayTeamName: teamsMap[actualMatch.awayTeamId] || "TBA",
+                        homeScore: actualMatch.homeScore,
+                        awayScore: actualMatch.awayScore,
+                        date: actualMatch.date
+                    };
+                }
+                return tournamentMatch; // Fallback se il match non viene trovato
+            });
+        } catch (error) {
+            console.error(`Error getting enriched matches for tournament ${tournamentId}`, error);
+            throw error;
+        }
     },
 
-    // Recupera i dettagli tecnici di un match (punteggi, squadre, ecc)
     getMatchById: async (matchId) => {
         const response = await api.get(`/matches/${matchId}`);
         return response.data;
     },
 
-    // UPDATE del Match (per il tuo MatchEditor)
     updateMatch: async (id, data) => {
         const response = await api.put(`/matches/${id}`, data);
         return response.data;
     },
 
-    /**
-     * Updates match results and triggers winner promotion in the tournament bracket
-     */
     updateMatchResults: async (matchId, matchData) => {
         try {
             const response = await api.put(`/tournaments/matches/${matchId}/results`, matchData);
@@ -162,11 +164,10 @@ const tournamentService = {
         }
     },
 
-    // DELETE /tournaments/{tournamentId}/matches/{matchId}
     deleteMatchFromTournament: async (tournamentId, matchId) => {
         try{
             await api.delete(`/tournaments/${tournamentId}/matches/${matchId}`);
-        }catch (error) {
+        } catch (error) {
             console.error(`Error deleting match from tournament`, error);
             throw error;
         }

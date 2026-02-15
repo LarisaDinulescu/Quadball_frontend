@@ -163,23 +163,19 @@ export default function LiveMatch() {
     const userIsManager = isManager();
 
     const displayedMatches = matches.filter(match => {
-        // Logica di visualizzazione
+        // Il manager vede sempre TUTTO (passati, presenti e futuri) per poter gestire il sistema
+        if (userIsManager) return true;
+
+        // --- LOGICA PER UTENTI NORMALI E SPETTATORI ---
         const isFinished = match.isMatchFinished === true;
         const isStarted = match.homeScore !== null;
+        const isLive = isStarted && !isFinished; // Partita attualmente in corso
+        const isToday = match.date === today;    // Partita programmata o finita in data odierna
 
-        // Sempre visibili le Live
-        if (isStarted && !isFinished) return true;
-
-        // Sempre visibili le Finite (se oggi o recenti, qui mettiamo sempre per semplicità debug)
-        if (isFinished) return true;
-
-        // Manager vede le programmate
-        if (userIsManager && !isStarted) return true;
-
-        // Utenti vedono programmate di oggi
-        if (!isStarted && match.date === today) return true;
-
-        return false;
+        // Un utente normale vede la partita SOLO SE:
+        // 1. È attualmente LIVE (anche se ha scavallato la mezzanotte)
+        // 2. Oppure la data della partita è esattamente OGGI (programmate per oggi o finite oggi)
+        return isLive || isToday;
     });
 
     if (loading) return (
