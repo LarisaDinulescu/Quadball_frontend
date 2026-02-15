@@ -10,12 +10,12 @@ const MatchDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    // --- STATO ---
+    // --- STATE ---
     const [matchInfo, setMatchInfo] = useState(null);
     const [currentScore, setCurrentScore] = useState({ home: 0, away: 0 });
     const [gameMinute, setGameMinute] = useState(0);
 
-    // Mappe per convertire ID in Nomi
+    // Maps to Convert IDs to Names
     const [teamsMap, setTeamsMap] = useState({});
     const [playersMap, setPlayersMap] = useState({});
 
@@ -23,7 +23,7 @@ const MatchDetail = () => {
     const [loading, setLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
 
-    // Stati di controllo
+    // Control states
     const [isMatchEnded, setIsMatchEnded] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
 
@@ -45,7 +45,7 @@ const MatchDetail = () => {
 
     const getTeamName = (id, map = teamsMap) => map[id] || `Team ${id}`;
 
-    // Formattazione Data e Ora
+    // Date and Time Formatting
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
         const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
@@ -54,7 +54,7 @@ const MatchDetail = () => {
 
     const formatTime = (timeStr) => {
         if (!timeStr) return '';
-        return timeStr.substring(0, 5); // Prende solo HH:MM
+        return timeStr.substring(0, 5); // it takes only HH:MM
     };
 
     const getEventStyle = (type) => {
@@ -65,9 +65,9 @@ const MatchDetail = () => {
         return 'border-slate-200 bg-white';
     };
 
-    // Generatore descrizioni (accetta mappe opzionali per funzionare durante il load iniziale)
+    // Description Generator (accepts optional maps to run during initial load)
     const generateDescription = (ev, tMap = teamsMap, pMap = playersMap) => {
-        // Recupera nome giocatore e team dalle mappe
+        // Retrieve player name and team from maps
         const playerName = pMap[ev.playerId] || `Player ${ev.playerId}`;
         const teamName = tMap[ev.teamId] || `Team ${ev.teamId}`;
 
@@ -84,34 +84,34 @@ const MatchDetail = () => {
         }
     };
 
-    // --- 2. CARICAMENTO DATI (CORRETTO con Promise.all) ---
+    // --- DATA LOADING (FIXED with Promise.all) ---
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                // 1. Scarichiamo TUTTO in parallelo per avere le mappe pronte subito
+                // Download EVERYTHING in parallel to have the maps ready immediately
                 const [matchRes, teamRes, playerRes] = await Promise.all([
                     api.get(`/matches/${id}`),
                     api.get('/teams'),
                     api.get('/players')
                 ]);
 
-                // A. Costruiamo le Mappe SUBITO
+                // Let's Build Maps NOW
                 const tMap = {};
                 if (Array.isArray(teamRes.data)) teamRes.data.forEach(t => tMap[t.id] = t.name);
 
                 const pMap = {};
                 if (Array.isArray(playerRes.data)) playerRes.data.forEach(p => {
-                    // Combina Nome e Cognome se presente
+                    // Combine First and Last Name if present
                     const fullName = p.surname ? `${p.name} ${p.surname}` : p.name;
                     pMap[p.id] = fullName;
                 });
 
-                // Salviamo nello stato per l'uso futuro
+                // We save in the state for future use
                 setTeamsMap(tMap);
                 setPlayersMap(pMap);
                 setMatchInfo(matchRes.data);
 
-                // B. Impostiamo punteggi e stato
+                // We set scores and status
                 if (matchRes.data.snitchCaughtByTeamId != null) {
                     setIsMatchEnded(true);
                 }
@@ -120,20 +120,20 @@ const MatchDetail = () => {
                     away: matchRes.data.awayScore || 0
                 });
 
-                // C. Ora scarichiamo lo storico eventi e usiamo le mappe APPENA create
+                // Now let's download the event history and use the NEWLY created maps
                 try {
                     const eventsRes = await api.get(`/live-game-events/match/${id}`);
 
                     if (Array.isArray(eventsRes.data) && eventsRes.data.length > 0) {
                         const sortedEvents = eventsRes.data.sort((a, b) => b.gameMinute - a.gameMinute || new Date(b.timestamp) - new Date(a.timestamp));
 
-                        // Controllo finale
+                        // Final check
                         const lastEvent = sortedEvents[0];
                         if (lastEvent.type === 'MATCH_END' || lastEvent.type === 'SNITCH_CAUGHT') {
                             setIsMatchEnded(true);
                         }
 
-                        // Formattiamo usando tMap e pMap locali!
+                        // Let's format using local tMap and pMap!
                         const formattedEvents = sortedEvents.map(ev => ({
                             ...ev,
                             description: generateDescription(ev, tMap, pMap),
@@ -156,7 +156,7 @@ const MatchDetail = () => {
         fetchAllData();
     }, [id]);
 
-    // --- 3. WEBSOCKET ---
+    // --- WEBSOCKET ---
     useEffect(() => {
         const socketUrl = 'http://localhost:8080/ws-quadball';
         const client = new Client({
@@ -179,7 +179,7 @@ const MatchDetail = () => {
         return () => { if (stompClientRef.current) stompClientRef.current.deactivate(); };
     }, [id, matchInfo]);
 
-    // --- 4. GESTIONE EVENTI LIVE ---
+    // --- LIVE EVENT MANAGEMENT ---
     const handleLiveEvent = (event) => {
         setGameMinute(event.gameMinute);
         if (event.matchScore && matchInfo) {
@@ -190,29 +190,29 @@ const MatchDetail = () => {
             }
         }
 
-        // Se arriva un evento di reset (Start), resetta lo stato finito
+        // If a reset (Start) event arrives, reset the finished state
         if (event.type === 'MATCH_START') {
             setIsMatchEnded(false);
         }
-        // Se arriva evento di fine
+        // If end event arrives
         else if (event.type === 'MATCH_END' || event.type === 'SNITCH_CAUGHT') {
             setIsMatchEnded(true);
         }
 
         const logEntry = {
             ...event,
-            description: generateDescription(event), // Qui usa lo stato globale (aggiornato)
+            description: generateDescription(event), // Here uses the global state (updated)
             style: getEventStyle(event.type)
         };
         setEventsLog(prev => [logEntry, ...prev]);
     };
 
-    // --- 5. AZIONI UTENTE ---
+    // --- USER ACTION ---
     const handleStartSimulation = async () => {
         try {
             setIsSimulating(true);
 
-            // Reset immediato UI
+            // Immediate UI reset
             setIsMatchEnded(false);
             setEventsLog([]);
             setGameMinute(0);
@@ -242,7 +242,7 @@ const MatchDetail = () => {
     return (
         <div className="min-h-screen bg-slate-50 py-8 px-4">
             <div className="max-w-4xl mx-auto">
-                {/* Header Navigazione */}
+                {/* Navigation Header */}
                 <div className="flex justify-between items-center mb-6">
                     <Button variant="ghost" onClick={() => navigate('/live')} className="text-slate-500 hover:text-slate-800 font-bold uppercase text-xs tracking-wider">
                         <ChevronLeft className="w-5 h-5 mr-1" /> Back to Arena

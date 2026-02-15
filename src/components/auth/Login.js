@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // 1. Importa useNavigate
+import { useNavigate } from 'react-router-dom'; // useNavigate import
 import { login } from '../../services/authService'; 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -11,7 +11,7 @@ const Login = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(''); 
   
-  const navigate = useNavigate(); // 2. Inizializza navigate
+  const navigate = useNavigate(); // Initialize navigate
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +21,7 @@ const Login = ({ onLoginSuccess }) => {
     try {
       const data = await login(email, password);
       onLoginSuccess(data.user);
-      navigate('/tournaments'); // 3. Dopo il login, vai alla lista tornei
+      navigate('/tournaments'); // After logging in, go to the tournament list
     } catch (err) {
       console.error("Login failed:", err);
       const message = err.response?.data?.message || "Invalid credentials. Please try again.";
@@ -84,7 +84,7 @@ const Login = ({ onLoginSuccess }) => {
             </Button>
             
             <div className="flex flex-col items-center gap-2">
-              {/* 4. Collegamento a Forgot Password */}
+              {/* Connect to Forgot Password */}
               <Button 
                 variant="link" 
                 className="text-xs text-slate-500"
@@ -94,7 +94,7 @@ const Login = ({ onLoginSuccess }) => {
                 Forgot your password?
               </Button>
               
-              {/* 5. Collegamento a Register */}
+              {/* Connect to Register */}
               <Button 
                 variant="ghost" 
                 className="w-full text-sm font-semibold text-slate-600 underline"

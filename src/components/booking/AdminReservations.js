@@ -47,7 +47,7 @@ const AdminReservations = () => {
     }
   };
 
-  // Filtra le prenotazioni per email o codice ID
+  // Filter reservations by email or ID code
   const filteredReservations = reservations.filter(res => 
     res.spectatorEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     res.id?.toString().includes(searchTerm)

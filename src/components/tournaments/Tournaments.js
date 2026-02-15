@@ -129,23 +129,22 @@ const Tournaments = () => {
                         {loading ? (
                             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" size={40}/></div>
                         ) : bracketRounds.length > 0 ? (
-                            /* CONTENITORE BRACKET ORIZZONTALE */
+                            /* HORIZONTAL BRACKET CONTAINER */
                             <div className="flex-1 overflow-x-auto overflow-y-auto pb-10 bg-white rounded-3xl border shadow-inner p-8 custom-scrollbar">
                                 <div className="flex min-w-max gap-16 justify-start items-center h-full">
                                     {bracketRounds.map((roundMatches, roundIndex) => (
                                         <div key={roundIndex} className="flex flex-col justify-around h-full min-w-[300px] relative">
-                                            {/* Titolo del Round */}
+                                            {/* Round Title */}
                                             <div className="absolute -top-6 left-0 right-0 text-center font-black text-slate-400 uppercase text-[10px] tracking-[0.2em] pb-2">
                                                 {getRoundName(roundIndex, bracketRounds.length)}
                                             </div>
 
-                                            {/* Partite della colonna */}
+                                            {/* Column matches */}
                                             {roundMatches.map((match, mIdx) => (
                                                 <div key={match.id || mIdx} className="relative py-4 flex flex-col justify-center">
-                                                    {/* RIMOSSA LA FUNZIONE onClick */}
+                                                    
                                                     <BracketMatchCard match={match} />
 
-                                                    {/* Linee di Connessione CSS */}
                                                     {roundIndex < bracketRounds.length - 1 && (
                                                         <>
                                                             <div className="absolute right-[-2rem] top-1/2 w-8 border-t-2 border-slate-300"></div>
@@ -196,9 +195,8 @@ const Tournaments = () => {
                             {isOrganizer && (
                                 <Button
                                     onClick={() => navigate('/tournaments/create')}
-                                    className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 shadow-xl font-black uppercase italic tracking-tighter px-6 py-6"
-                                >
-                                    <Plus size={18} /> Create Tournament
+                                    className="bg-indigo-600 hover:bg-indigo-700 gap-2 shadow-lg font-bold px-6 text-white">
+                                    <Plus size={20} /> Create Tournament
                                 </Button>
                             )}
                         </div>
@@ -232,7 +230,7 @@ const Tournaments = () => {
                                             </div>
                                         </div>
                                         <Button
-                                            className="w-full bg-slate-900 hover:bg-blue-600 mt-4 font-black uppercase italic tracking-widest transition-all py-6"
+                                            className="w-full bg-slate-900 bg-indigo-600 hover:bg-indigo-700 mt-4 font-black uppercase italic tracking-widest transition-all py-6 text-white"
                                             onClick={() => handleSelectTournament(t)}
                                         >
                                             View Bracket
@@ -252,7 +250,7 @@ const Tournaments = () => {
     );
 };
 
-// Componente Card per il singolo MATCH nel Tabellone (ORA STATICO)
+// Card Component for the single MATCH in the Scoreboard 
 const BracketMatchCard = ({ match }) => {
     const homeScore = match.homeScore ?? null;
     const awayScore = match.awayScore ?? null;
@@ -262,7 +260,6 @@ const BracketMatchCard = ({ match }) => {
 
     return (
         <Card
-            // Rimosse classi hover, cursor-pointer e animazioni
             className={`relative z-10 w-[280px] shadow-sm border-2 bg-white overflow-hidden ${
                 isPlayed ? "border-green-400" : isTBD ? "border-slate-200 opacity-60" : "border-slate-300"
             }`}
@@ -273,7 +270,7 @@ const BracketMatchCard = ({ match }) => {
             </div>
 
             <div className="flex flex-col p-0">
-                {/* Squadra di Casa */}
+                {/* Home Team */}
                 <div className="flex justify-between items-center px-4 py-3 border-b border-slate-100">
             <span className={`truncate pr-2 uppercase italic text-sm ${homeScore > awayScore ? "font-black text-slate-900" : "font-semibold text-slate-600"}`}>
                 {match.homeTeamName || "TBA"}
@@ -283,7 +280,7 @@ const BracketMatchCard = ({ match }) => {
             </span>
                 </div>
 
-                {/* Squadra in Trasferta */}
+                {/* Away Team */}
                 <div className="flex justify-between items-center px-4 py-3">
             <span className={`truncate pr-2 uppercase italic text-sm ${awayScore > homeScore ? "font-black text-slate-900" : "font-semibold text-slate-600"}`}>
                 {match.awayTeamName || "TBA"}
@@ -297,7 +294,7 @@ const BracketMatchCard = ({ match }) => {
     );
 };
 
-// Helper per i nomi dei round del tabellone
+// Board Round Name Helper
 const getRoundName = (index, totalRounds) => {
     if (totalRounds === 0) return "";
     const diff = totalRounds - index - 1;

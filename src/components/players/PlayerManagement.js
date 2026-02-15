@@ -15,7 +15,7 @@ const PlayerManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
-  // Controllo permessi centralizzato
+  // Centralized permission control
   const canEdit = hasRole('ROLE_ORGANIZATION_MANAGER') || hasRole('ROLE_TEAM_MANAGER');
 
   const fetchPlayers = async () => {
@@ -61,7 +61,7 @@ const PlayerManagement = () => {
           <p className="text-slate-500 text-sm font-medium">Athlete & Roster Management</p>
         </div>
         
-        {/* Pulsante uniformato a quello degli Officials */}
+        {/* Button in line with that of the Officials */}
         {canEdit && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);

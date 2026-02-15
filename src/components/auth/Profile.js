@@ -12,7 +12,7 @@ const Profile = ({ user }) => {
     const [myReservations, setMyReservations] = useState([]);
     const [loadingRes, setLoadingRes] = useState(false);
 
-    // Recupero iniziale dell'utente (props o localStorage)
+    // Initial user retrieval (props or localStorage)
     const [currentUser, setCurrentUser] = useState(() => {
         if (user && user.id) return user;
         const saved = localStorage.getItem('user');
@@ -41,14 +41,14 @@ const Profile = ({ user }) => {
         }
     }, [user]);
 
-    // Caricamento prenotazioni basato sull'ID numerico dell'Entity
+    // Loading reservations based on the Entity's numeric ID
     useEffect(() => {
         const fetchReservations = async () => {
             const userId = currentUser?.id;
             if (userId) {
                 setLoadingRes(true);
                 try {
-                    // Passiamo Number(userId) per coerenza con il Long di Java
+                    // We pass Number(userId) for consistency with Java's Long
                     const data = await reservationService.getReservationByUserId(Number(userId));
                     setMyReservations(data);
                 } catch (err) {
@@ -194,7 +194,7 @@ const Profile = ({ user }) => {
                                 <Card key={res.id} className="border-none shadow-md bg-white hover:shadow-lg transition-shadow border-l-4 border-blue-600">
                                     <CardContent className="p-6 flex flex-col md:flex-row justify-between items-center gap-4">
                                         <div className="space-y-1 text-center md:text-left">
-                                            {/* Allineato con ReservationEntity: usiamo matchId e seatNumber */}
+                                            {/* Aligned with ReservationEntity: we use matchId and seatNumber */}
                                             <p className="text-xl font-black uppercase italic text-slate-800">Match Reservation</p>
                                             <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-500">
                                                 <span className="flex items-center gap-1"><Ticket size={14} className="text-blue-600"/> ID Match: {res.matchId}</span>

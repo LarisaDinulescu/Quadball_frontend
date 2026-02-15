@@ -90,7 +90,7 @@ const tournamentService = {
         }
     },
 
-    // --- GESTIONE MATCH NEL TORNEO ---
+    // --- TOURNAMENT MATCH MANAGEMENT ---
 
     getMatchesTournamentId: async (tournamentId) => {
         try {
@@ -102,31 +102,31 @@ const tournamentService = {
         }
     },
 
-    // 🌟 NUOVO METODO: Scarica il tabellone E incrocia i dati con Squadre e Punteggi!
+    // NEW METHOD: Download the scoreboard and cross-reference the data with Teams and Scores!
     getEnrichedTournamentMatches: async (tournamentId) => {
         try {
-            // 1. Prende la struttura del tabellone
+            // Take the board structure
             const bracketRes = await api.get(`/tournaments/${tournamentId}/matches`);
             const rawMatches = bracketRes.data || [];
 
-            // 2. Prende tutti i match (per avere punteggi e ID squadre)
+            // Get all matches (to get scores and team IDs)
             const matchesRes = await api.get('/matches');
             const allMatches = matchesRes.data || [];
 
-            // 3. Prende tutti i team (per avere i nomi veri)
+            // Take all the teams (to have the real names)
             const teamsRes = await api.get('/teams');
             const allTeams = teamsRes.data || [];
 
-            // Mappa veloce per i nomi delle squadre
+            // Quick map for team names
             const teamsMap = {};
             allTeams.forEach(t => teamsMap[t.id] = t.name);
 
-            // 4. Unisce tutto insieme
+            // It ties everything together
             return rawMatches.map(tournamentMatch => {
                 const actualMatch = allMatches.find(m => m.id === tournamentMatch.matchId);
                 if (actualMatch) {
                     return {
-                        ...tournamentMatch, // Tiene round, bracketIndex, ecc.
+                        ...tournamentMatch, // Holds rounds, bracketIndex, etc.
                         homeTeamId: actualMatch.homeTeamId,
                         awayTeamId: actualMatch.awayTeamId,
                         homeTeamName: teamsMap[actualMatch.homeTeamId] || "TBA",
@@ -136,7 +136,7 @@ const tournamentService = {
                         date: actualMatch.date
                     };
                 }
-                return tournamentMatch; // Fallback se il match non viene trovato
+                return tournamentMatch; // Fallback if match is not found
             });
         } catch (error) {
             console.error(`Error getting enriched matches for tournament ${tournamentId}`, error);

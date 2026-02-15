@@ -37,7 +37,7 @@ import MatchManagement from './components/matches/MatchManagement';
 
 function App() {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true); // Aggiunto per gestire il caricamento iniziale
+    const [loading, setLoading] = useState(true); // Added to handle initial loading
 
     useEffect(() => {
         const loggedInUser = localStorage.getItem('user');
@@ -46,7 +46,7 @@ function App() {
                 setUser(JSON.parse(loggedInUser));
             } catch (error) {
                 console.error("Error loading user data", error);
-                localStorage.removeItem('user'); // Pulisce se il JSON è corrotto
+                localStorage.removeItem('user'); // Cleans up if the JSON is corrupted
             }
         }
         setLoading(false);
@@ -228,7 +228,7 @@ function DashboardHome({ user }) {
         return roleString ? roleString.replace('ROLE_', '').replace(/_/g, ' ') : 'User';
     };
 
-    // Fallback se user viene perso durante il render
+    // Fallback if user is lost during rendering
     if (!user) return null;
 
     return (
@@ -242,7 +242,7 @@ function DashboardHome({ user }) {
                 </Typography>
             </Paper>
             <Divider sx={{ my: 4 }}>YOUR PROFILE</Divider>
-            {/* Protezione extra per il componente Profile */}
+            {/* Extra protection for the Profile component */}
             {user && <Profile user={user} />}
         </Container>
     );

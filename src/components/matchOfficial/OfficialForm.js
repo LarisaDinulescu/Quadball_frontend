@@ -67,7 +67,6 @@ const OfficialForm = ({ initialData, onSuccess }) => {
             <Input name="lastName" value={formData.lastName} onChange={handleChange} required className="border-slate-200" />
           </div>
         </div>
-        {/* Riga per Email e Telefono */}
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
                 <Label className="text-xs uppercase font-bold text-slate-500">Email</Label>

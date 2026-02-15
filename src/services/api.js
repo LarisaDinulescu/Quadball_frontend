@@ -11,7 +11,7 @@ api.interceptors.request.use(
   (config) => {
     let finalToken = localStorage.getItem('token');
     
-    // Se non troviamo il token singolo, proviamo a estrarlo dall'oggetto user
+    // If we don't find the single token, we try to extract it from the user object
     if (!finalToken) {
       try {
         const userData = localStorage.getItem('user');
@@ -40,15 +40,15 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
 
-    // 401: Token scaduto o non valido
-    // 403: Accesso negato (ma spesso Spring Security lo usa se il token è mancante/invalido)
+    // 401: Token expired or invalid
+    // 403: Access denied (but Spring Security often uses this if the token is missing/invalid)
     if (status === 401 || status === 403) {
-      // Puliamo il localStorage solo se eravamo effettivamente loggati
+      // We only clear localStorage if we were actually logged in
       if (localStorage.getItem('token') || localStorage.getItem('user')) {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         
-        // Evitiamo il redirect se siamo già nella pagina di login
+        // Let's avoid the redirect if we are already on the login page
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login?expired=true';
         }

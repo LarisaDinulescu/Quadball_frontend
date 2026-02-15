@@ -14,11 +14,11 @@ export default function MatchEditor() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Stato per i dati "visivi" (es. nomi squadre) che non modifichiamo
+    // Status for "visual" data (e.g. team names) that we do not modify
     const [matchDisplay, setMatchDisplay] = useState(location.state?.match || null);
 
     const [stadiums, setStadiums] = useState([]);
-    const [loading, setLoading] = useState(true); // Partiamo con loading TRUE
+    const [loading, setLoading] = useState(true); // Starting with loading TRUE
 
     const [formData, setFormData] = useState({
         homeScore: 0,
@@ -31,24 +31,24 @@ export default function MatchEditor() {
     useEffect(() => {
         const initData = async () => {
             try {
-                // 1. Carichiamo gli stadi in parallelo
+                // We load the stages in parallel
                 const stadiumsPromise = stadiumService.getAllStadiums();
 
                 let currentMatch = location.state?.match;
 
-                // 2. Se NON abbiamo i dati dal "location.state" (es. dopo refresh), li chiediamo al backend
+                // If we do NOT have the data from the "location.state" (e.g. after refresh), we ask the backend for it
                 if (!currentMatch) {
                     console.log("Dati persi al refresh, recupero dal server...");
                     currentMatch = await tournamentService.getMatchById(matchId);
                 }
 
-                // 3. Attendiamo gli stadi
+                // waiting for the stadiums
                 const stadiumsData = await stadiumsPromise;
                 setStadiums(stadiumsData);
 
-                // 4. Aggiorniamo lo stato
+                // status update
                 if (currentMatch) {
-                    setMatchDisplay(currentMatch); // Serve per mostrare "Gryffindor vs Slytherin" nell'header
+                    setMatchDisplay(currentMatch); 
                     setFormData({
                         homeScore: currentMatch.homeScore || 0,
                         awayScore: currentMatch.awayScore || 0,
@@ -82,7 +82,7 @@ export default function MatchEditor() {
 
     if (loading) return <div className="p-10 text-center">Loading match data...</div>;
 
-    // Se dopo il caricamento non abbiamo ancora il match, allora è un errore vero (ID sbagliato)
+    // If after loading we still don't have the match, then it's a real error (wrong ID)
     if (!matchDisplay) return <div className="p-10 text-center">Match ID not found.</div>;
 
   return (
@@ -130,11 +130,11 @@ export default function MatchEditor() {
               </div>
             </div>
 
-              {/* MODIFICA 4: AGGIUNTA SEZIONE BOCCINO (SNITCH) */}
+              {/* ADDED SNITCH SECTION */}
               <div className="space-y-2 border p-4 rounded-lg bg-yellow-50/50 border-yellow-200">
                   <Label className="font-bold text-xs uppercase text-yellow-700">Golden Snitch Caught By</Label>
                   <Select
-                      // Gestiamo il valore null convertendolo in stringa per il select
+                      // to handle the null value by converting it to a string for the select
                       value={formData.snitchCaughtByTeamId ? formData.snitchCaughtByTeamId.toString() : "none"}
                       onValueChange={(val) => setFormData({...formData, snitchCaughtByTeamId: val === "none" ? null : val})}
                   >

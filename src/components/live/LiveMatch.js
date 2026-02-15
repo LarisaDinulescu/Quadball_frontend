@@ -15,7 +15,7 @@ export default function LiveMatch() {
     const stompClientRef = useRef(null);
     const navigate = useNavigate();
 
-    // Helper Data Oggi
+    // Helper Date Today
     const getTodayString = () => {
         const d = new Date();
         return d.toISOString().split('T')[0];
@@ -37,7 +37,7 @@ export default function LiveMatch() {
         } catch (e) { return false; }
     };
 
-    // 1. Init Data
+    // Init Data
     useEffect(() => {
         const initData = async () => {
             try {
@@ -50,10 +50,10 @@ export default function LiveMatch() {
                 const mRes = await api.get('/matches');
                 const sorted = (mRes.data || []).sort((a, b) => b.id - a.id);
 
-                // Mappiamo i dati aggiungendo un flag esplicito 'isMatchFinished' basato sul DB
+                // mapping data by adding an explicit 'isMatchFinished' flag based on the DB
                 const mappedMatches = sorted.map(m => ({
                     ...m,
-                    isMatchFinished: m.snitchCaughtByTeamId != null // Se c'è un catcher, è finita
+                    isMatchFinished: m.snitchCaughtByTeamId != null 
                 }));
 
                 setMatches(mappedMatches);
@@ -62,7 +62,7 @@ export default function LiveMatch() {
         initData();
     }, []);
 
-    // 2. WebSocket
+    // WebSocket
     useEffect(() => {
         const socketUrl = 'http://localhost:8080/ws-quadball';
         const client = new Client({
@@ -84,18 +84,18 @@ export default function LiveMatch() {
                 const newHomeScore = event.matchScore ? event.matchScore[match.homeTeamId] : match.homeScore;
                 const newAwayScore = event.matchScore ? event.matchScore[match.awayTeamId] : match.awayScore;
 
-                // LOGICA STATO FINITO
+                // FINISHED STATE LOGIC
                 let finished = match.isMatchFinished;
                 let caughtId = match.snitchCaughtByTeamId;
 
                 if (event.type === 'MATCH_START') {
-                    finished = false; // Ricomincia -> LIVE
+                    finished = false; // Start again -> LIVE
                     caughtId = null;
                 } else if (event.type === 'SNITCH_CAUGHT') {
-                    finished = true;  // Preso boccino -> FINITA
+                    finished = true;  // Caught the snitch -> FINISHED
                     caughtId = event.teamId;
                 } else if (event.type === 'MATCH_END') {
-                    finished = true;  // Fischio finale -> FINITA (sicuro al 100%)
+                    finished = true;  // Final whistle -> OVER (100% sure)
                 }
 
                 return {
@@ -104,7 +104,7 @@ export default function LiveMatch() {
                     awayScore: newAwayScore,
                     gameMinute: event.gameMinute,
                     snitchCaughtByTeamId: caughtId,
-                    isMatchFinished: finished // Usiamo questo flag per la UI
+                    isMatchFinished: finished // We use this flag for UI
                 };
             }
             return match;
@@ -113,16 +113,15 @@ export default function LiveMatch() {
 
     const getTeamName = (id) => teamsMap[id] || `Team ${id}`;
 
-    // 3. Configurazione Grafica Stato
+    // Status Graphic Configuration
     const getMatchStatusConfig = (match) => {
-        // Usiamo il flag calcolato (che considera sia DB che WebSocket)
+        // We use the calculated flag (which considers both DB and WebSocket)
         const isFinished = match.isMatchFinished === true;
         const isStarted = (match.homeScore !== null && match.awayScore !== null);
 
-        // È Live solo se è iniziata E NON è finita
         const isLive = isStarted && !isFinished;
 
-        // CASO 1: PARTITA FINITA
+        // CASE 1: GAME OVER
         if (isFinished) return {
             borderColor: "border-slate-400",
             icon: <Trophy size={14} className="text-yellow-600 mr-1" />,
@@ -132,7 +131,7 @@ export default function LiveMatch() {
             showMinute: false
         };
 
-        // CASO 2: LIVE NOW
+        // CASE 2: LIVE NOW
         if (isLive) return {
             borderColor: "border-red-500",
             icon: (
@@ -147,7 +146,7 @@ export default function LiveMatch() {
             showMinute: true
         };
 
-        // CASO 3: PROGRAMMATA
+        // CASE 3: SCHEDULED
         return {
             borderColor: "border-blue-100",
             icon: <Calendar size={14} className="text-slate-400 mr-1" />,
@@ -158,25 +157,25 @@ export default function LiveMatch() {
         };
     };
 
-    // 4. Logica Filtro
+    // Filter Logic
     const today = getTodayString();
     const userIsManager = isManager();
 
     const displayedMatches = matches.filter(match => {
-        // Logica di visualizzazione
+        // Display logic
         const isFinished = match.isMatchFinished === true;
         const isStarted = match.homeScore !== null;
 
-        // Sempre visibili le Live
+        // Live shows are always visible
         if (isStarted && !isFinished) return true;
 
-        // Sempre visibili le Finite (se oggi o recenti, qui mettiamo sempre per semplicità debug)
+        // Always visible the Finished ones (whether today or recent, here we always put debug for simplicity)
         if (isFinished) return true;
 
-        // Manager vede le programmate
+        // Manager sees the scheduled
         if (userIsManager && !isStarted) return true;
 
-        // Utenti vedono programmate di oggi
+        // Users see today's scheduled
         if (!isStarted && match.date === today) return true;
 
         return false;

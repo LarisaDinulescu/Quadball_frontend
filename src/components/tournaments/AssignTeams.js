@@ -23,20 +23,20 @@ const AssignTeams = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // 1. Carica dettagli del match per avere i dati attuali
+        // Load match details to get current data
         const matchData = await tournamentService.getMatchById(matchId);
         setMatch(matchData);
         setSelectedHomeId(matchData.homeTeamId ? String(matchData.homeTeamId) : '');
         setSelectedAwayId(matchData.awayTeamId ? String(matchData.awayTeamId) : '');
 
-        // 2. Carica TUTTE le squadre registrate nel sistema
+        // Upload ALL teams registered in the system
         const teamsDetails = await teamService.getAllTeams();
         
-        // 3. Carica gli ID delle squadre che partecipano specificamente a questo torneo
+        // Upload the IDs of the teams that are specifically participating in this tournament
         const participantIds = await tournamentService.getTeamsTorunamentId(tournamentId);
         
-        // 4. Filtro: Mostriamo solo le squadre che sono iscritte a questo torneo
-        // Usiamo String() per confrontare gli ID in modo sicuro (evita problemi Long vs String)
+        // Filter: We only show teams that are registered for this tournament
+        // We use String() to compare IDs safely (avoid Long vs String issues)
         const tournamentTeams = teamsDetails.filter(t => 
           participantIds.some(pId => String(pId) === String(t.id))
         );
@@ -54,7 +54,7 @@ const AssignTeams = () => {
   }, [tournamentId, matchId]);
 
   const handleSave = async () => {
-    // Validazione base
+    // Basic validation
     if (!selectedHomeId || !selectedAwayId) {
       alert("Please select both teams for this match.");
       return;
@@ -66,15 +66,15 @@ const AssignTeams = () => {
 
     try {
       setLoading(true);
-      // Inviamo l'aggiornamento al backend. 
-      // Poiché il backend è "blindato", usiamo la updateMatch standard.
+      // We send the update to the backend.
+      // Since the backend is "locked down", we use the standard updateMatch.
       await tournamentService.updateMatch(matchId, {
         ...match,
         homeTeamId: selectedHomeId,
         awayTeamId: selectedAwayId
       });
       
-      // Torniamo alla visualizzazione del torneo
+      // Let's go back to the tournament view
       navigate('/tournaments');
     } catch (err) {
       console.error("Error saving match assignment", err);

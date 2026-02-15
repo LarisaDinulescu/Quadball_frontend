@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:8080/api/matches'; 
 
-// Funzione interna per ottenere gli header con il token
+// Internal function to get headers with token
 const getAuthHeaders = () => {
     const user = JSON.parse(localStorage.getItem('user'));
     if (user && user.accessToken) {
@@ -18,7 +18,7 @@ const matchService = {
 */
 getAllMatches: async () => {
     try {
-        // Aggiunto getAuthHeaders() per permettere la visualizzazione dopo il cambio in WebSecurityConfig
+        // Added getAuthHeaders() to allow display after change in WebSecurityConfig
         const response = await axios.get(API_URL, { headers: getAuthHeaders() });
         return response.data;
     } catch (error) {
@@ -32,7 +32,7 @@ getAllMatches: async () => {
 */
 getMatchById: async (id) => {
     try {
-        // Aggiunto getAuthHeaders()
+        // added getAuthHeaders()
         const response = await axios.get(`${API_URL}/${id}`, { headers: getAuthHeaders() });
         return response.data;
     } catch(error) {

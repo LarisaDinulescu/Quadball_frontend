@@ -29,7 +29,7 @@ const reservationService = {
         }
     },
 
-  getReservationById: async (Id) => { // <--- Cambia parametro in userId
+  getReservationById: async (Id) => { // <--- Change parameter to userId
       try {
           const response = await api.get(`/reservations/${Id}`);
           return response.data;

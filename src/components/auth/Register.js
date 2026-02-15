@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Importa useNavigate
-import { signup } from '../../services/authService'; // Usa il servizio reale
+import { useNavigate } from 'react-router-dom'; // useNavigate import
+import { signup } from '../../services/authService'; // use real service
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -31,7 +31,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // Chiamata al backend Java: Long signUp(SignUpRequest signUpRequest);
+      // Java backend call: Long signUp(SignUpRequest signUpRequest);
       await signup(formData);
       setSuccess(true);
     } catch (err) {
@@ -108,7 +108,7 @@ const Register = () => {
               variant="ghost" 
               className="w-full text-sm font-semibold text-slate-600"
               type="button"
-              onClick={() => navigate('/login')} // Navigazione verso il login
+              onClick={() => navigate('/login')} // Navigating to login
             >
               Already have an account? Log In
             </Button>

@@ -6,7 +6,7 @@ export const updateUserData = async (userId, userData) => {
         payloadMap.set("name", userData.name);
         payloadMap.set("surname", userData.surname);
 
-// Per inviarlo con axios (che richiede un oggetto piano)
+// To send it with axios (which requires a plane object)
 const payload = Object.fromEntries(payloadMap);
         const response = await api.put(`/users/${userId}`, payload);
         return response.data;
