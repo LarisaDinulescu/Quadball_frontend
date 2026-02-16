@@ -39,3 +39,17 @@ npm start
 
 The application will open automatically in your browser at http://localhost:3000.
 
+## 🔑 Test Credentials
+Our backend is equipped with a DataSeedingConfig that populates the database on startup. You can log in immediately using the following test accounts:
+
+### Admin / Organization Manager (Full Access):
+
+Email: ROLE_ORGANIZATION_MANAGER@test.com
+
+Password: 123456
+
+### Player / Spectator:
+
+Email: ROLE_SPECTATOR@test.com
+
+Password: 123456
