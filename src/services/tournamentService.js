@@ -94,7 +94,7 @@ const tournamentService = {
 
     getMatchesTournamentId: async (tournamentId) => {
         try {
-            const response = await api.get(`/tournaments/${tournamentId}/matches`);
+            const response = await api.get(`/tournament-management/${tournamentId}`);
             return response.data;
         } catch (error) {
             console.error(`Error getting matches for tournament ${tournamentId}`, error);
@@ -102,42 +102,33 @@ const tournamentService = {
         }
     },
 
-    // NEW METHOD: Download the scoreboard and cross-reference the data with Teams and Scores!
+    // NEW METHOD: Handles the list of lists from /tournament-management/{id}
     getEnrichedTournamentMatches: async (tournamentId) => {
         try {
-            // Take the board structure
-            const bracketRes = await api.get(`/tournaments/${tournamentId}/matches`);
-            const rawMatches = bracketRes.data || [];
+            // 1. Get the list of lists (Rounds)
+            const bracketRes = await api.get(`/tournament-management/${tournamentId}`);
+            const rounds = bracketRes.data || [];
 
-            // Get all matches (to get scores and team IDs)
-            const matchesRes = await api.get('/matches');
-            const allMatches = matchesRes.data || [];
-
-            // Take all the teams (to have the real names)
+            // 2. Get all teams to map IDs to Names
             const teamsRes = await api.get('/teams');
             const allTeams = teamsRes.data || [];
-
-            // Quick map for team names
             const teamsMap = {};
             allTeams.forEach(t => teamsMap[t.id] = t.name);
 
-            // It ties everything together
-            return rawMatches.map(tournamentMatch => {
-                const actualMatch = allMatches.find(m => m.id === tournamentMatch.matchId);
-                if (actualMatch) {
-                    return {
-                        ...tournamentMatch, // Holds rounds, bracketIndex, etc.
-                        homeTeamId: actualMatch.homeTeamId,
-                        awayTeamId: actualMatch.awayTeamId,
-                        homeTeamName: teamsMap[actualMatch.homeTeamId] || "TBA",
-                        awayTeamName: teamsMap[actualMatch.awayTeamId] || "TBA",
-                        homeScore: actualMatch.homeScore,
-                        awayScore: actualMatch.awayScore,
-                        date: actualMatch.date
-                    };
-                }
-                return tournamentMatch; // Fallback if match is not found
+            // 3. Flatten the rounds and enrich each match
+            // We use the outer array index to set the "round" property for the frontend
+            const enrichedMatches = rounds.flatMap((roundMatches, index) => {
+                return roundMatches.map(match => ({
+                    ...match,
+                    round: index + 1, // Convert index 0 to Round 1, index 1 to Round 2, etc.
+                    homeTeamName: teamsMap[match.homeTeamId] || (match.homeTeamId ? `Team ${match.homeTeamId}` : "TBA"),
+                    awayTeamName: teamsMap[match.awayTeamId] || (match.awayTeamId ? `Team ${match.awayTeamId}` : "TBA"),
+                    homeScore: match.homeScore,
+                    awayScore: match.awayScore
+                }));
             });
+
+            return enrichedMatches;
         } catch (error) {
             console.error(`Error getting enriched matches for tournament ${tournamentId}`, error);
             throw error;

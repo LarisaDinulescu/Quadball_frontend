@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Trophy, Calendar, MapPin, ChevronLeft, Plus, Ticket, Trash2, Loader2 } from "lucide-react";
+import { Trophy, Calendar, MapPin, ChevronLeft, Plus, Trash2, Loader2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import tournamentService from '../../services/tournamentService';
 
@@ -63,10 +63,13 @@ const Tournaments = () => {
         setLoading(true);
         try {
             await tournamentService.generateBracket(tournamentId);
-            await handleSelectTournament(selectedTournament);
+            // Re-fetch tournament to show the new bracket
+            const updatedMatches = await tournamentService.getEnrichedTournamentMatches(tournamentId);
+            setBracketRounds(organizeBracket(updatedMatches));
         } catch (error) {
             console.error("Error generating bracket", error);
             alert("Failed to generate bracket. Make sure teams are assigned.");
+        } finally {
             setLoading(false);
         }
     };
@@ -74,6 +77,7 @@ const Tournaments = () => {
     const organizeBracket = (matches) => {
         if (!matches || matches.length === 0) return [];
 
+        // Groups matches by the 'round' property assigned in the service
         const roundsMap = matches.reduce((acc, match) => {
             const r = match.round || 1;
             if (!acc[r]) acc[r] = [];
@@ -81,18 +85,12 @@ const Tournaments = () => {
             return acc;
         }, {});
 
-        const maxRound = Math.max(...Object.keys(roundsMap).map(Number));
-        const sortedRounds = [];
-
-        for (let i = 1; i <= maxRound; i++) {
-            if (roundsMap[i]) {
-                sortedRounds.push(roundsMap[i].sort((a, b) => (a.bracketIndex || 0) - (b.bracketIndex || 0)));
-            } else {
-                sortedRounds.push([]);
-            }
-        }
-
-        return sortedRounds;
+        const sortedRoundKeys = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+        
+        return sortedRoundKeys.map(key => {
+            // Sort matches within the round using id or bracketIndex to keep vertical positions consistent
+            return roundsMap[key].sort((a, b) => (a.id || 0) - (b.id || 0));
+        });
     };
 
     if (loading && !selectedTournament) return (
@@ -107,7 +105,6 @@ const Tournaments = () => {
             <div className="max-w-[1400px] w-full mx-auto flex-1 flex flex-col">
 
                 {selectedTournament ? (
-                    /* --- VIEW B: BRACKET GRAFICO --- */
                     <div className="animate-in fade-in duration-500 flex flex-col h-full">
                         <div className="mb-8 shrink-0">
                             <Button
@@ -129,34 +126,26 @@ const Tournaments = () => {
                         {loading ? (
                             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" size={40}/></div>
                         ) : bracketRounds.length > 0 ? (
-                            /* HORIZONTAL BRACKET CONTAINER */
                             <div className="flex-1 overflow-x-auto overflow-y-auto pb-10 bg-white rounded-3xl border shadow-inner p-8 custom-scrollbar">
                                 <div className="flex min-w-max gap-16 justify-start items-center h-full">
                                     {bracketRounds.map((roundMatches, roundIndex) => (
                                         <div key={roundIndex} className="flex flex-col justify-around h-full min-w-[300px] relative">
-                                            {/* Round Title */}
                                             <div className="absolute -top-6 left-0 right-0 text-center font-black text-slate-400 uppercase text-[10px] tracking-[0.2em] pb-2">
                                                 {getRoundName(roundIndex, bracketRounds.length)}
                                             </div>
 
-                                            {/* Column matches */}
                                             {roundMatches.map((match, mIdx) => (
                                                 <div key={match.id || mIdx} className="relative py-4 flex flex-col justify-center">
-                                                    
                                                     <BracketMatchCard match={match} />
-
+                                                    
+                                                    {/* Visual Connectors */}
                                                     {roundIndex < bracketRounds.length - 1 && (
                                                         <>
                                                             <div className="absolute right-[-2rem] top-1/2 w-8 border-t-2 border-slate-300"></div>
-
-                                                            {(mIdx % 2 === 0) ? (
+                                                            {mIdx % 2 === 0 ? (
                                                                 <div className="absolute right-[-2rem] top-1/2 bottom-[-50%] border-r-2 border-slate-300 rounded-tr-lg"></div>
                                                             ) : (
                                                                 <div className="absolute right-[-2rem] top-[-50%] bottom-1/2 border-r-2 border-slate-300 rounded-br-lg"></div>
-                                                            )}
-
-                                                            {(mIdx % 2 === 0) && (
-                                                                <div className="absolute right-[-4rem] top-[100%] w-8 border-t-2 border-slate-300 z-0 hidden lg:block"></div>
                                                             )}
                                                         </>
                                                     )}
@@ -182,7 +171,6 @@ const Tournaments = () => {
                         )}
                     </div>
                 ) : (
-                    /* --- VIEW A: TOURNAMENTS LIST --- */
                     <div className="animate-in slide-in-from-bottom-4 duration-500">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
                             <div>
@@ -191,7 +179,6 @@ const Tournaments = () => {
                                 </h1>
                                 <p className="text-slate-500 font-medium mt-2 uppercase text-xs tracking-widest">Select an event to view the brackets</p>
                             </div>
-
                             {isOrganizer && (
                                 <Button
                                     onClick={() => navigate('/tournaments/create')}
@@ -230,7 +217,7 @@ const Tournaments = () => {
                                             </div>
                                         </div>
                                         <Button
-                                            className="w-full bg-slate-900 bg-indigo-600 hover:bg-indigo-700 mt-4 font-black uppercase italic tracking-widest transition-all py-6 text-white"
+                                            className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4 font-black uppercase italic tracking-widest transition-all py-6 text-white"
                                             onClick={() => handleSelectTournament(t)}
                                         >
                                             View Bracket
@@ -250,13 +237,11 @@ const Tournaments = () => {
     );
 };
 
-// Card Component for the single MATCH in the Scoreboard 
 const BracketMatchCard = ({ match }) => {
     const homeScore = match.homeScore ?? null;
     const awayScore = match.awayScore ?? null;
     const isPlayed = homeScore !== null && awayScore !== null;
-
-    const isTBD = !match.homeTeamName && !match.awayTeamName;
+    const isTBD = !match.homeTeamId && !match.awayTeamId;
 
     return (
         <Card
@@ -266,39 +251,35 @@ const BracketMatchCard = ({ match }) => {
         >
             <div className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest flex justify-between ${isPlayed ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                 <span>{isPlayed ? "Final Score" : "Upcoming"}</span>
-                <span>Match #{match.matchId || match.id || "TBD"}</span>
+                <span>Match #{match.id || "TBD"}</span>
             </div>
 
             <div className="flex flex-col p-0">
-                {/* Home Team */}
                 <div className="flex justify-between items-center px-4 py-3 border-b border-slate-100">
-            <span className={`truncate pr-2 uppercase italic text-sm ${homeScore > awayScore ? "font-black text-slate-900" : "font-semibold text-slate-600"}`}>
-                {match.homeTeamName || "TBA"}
-            </span>
+                    <span className={`truncate pr-2 uppercase italic text-sm ${homeScore > awayScore ? "font-black text-slate-900" : "font-semibold text-slate-600"}`}>
+                        {match.homeTeamName || "TBA"}
+                    </span>
                     <span className={`px-2 py-0.5 rounded font-mono text-sm font-bold ${homeScore > awayScore ? 'bg-green-100 text-green-700' : 'text-slate-400'}`}>
-                {homeScore ?? "-"}
-            </span>
+                        {homeScore ?? "-"}
+                    </span>
                 </div>
 
-                {/* Away Team */}
                 <div className="flex justify-between items-center px-4 py-3">
-            <span className={`truncate pr-2 uppercase italic text-sm ${awayScore > homeScore ? "font-black text-slate-900" : "font-semibold text-slate-600"}`}>
-                {match.awayTeamName || "TBA"}
-            </span>
+                    <span className={`truncate pr-2 uppercase italic text-sm ${awayScore > homeScore ? "font-black text-slate-900" : "font-semibold text-slate-600"}`}>
+                        {match.awayTeamName || "TBA"}
+                    </span>
                     <span className={`px-2 py-0.5 rounded font-mono text-sm font-bold ${awayScore > homeScore ? 'bg-green-100 text-green-700' : 'text-slate-400'}`}>
-                {awayScore ?? "-"}
-            </span>
+                        {awayScore ?? "-"}
+                    </span>
                 </div>
             </div>
         </Card>
     );
 };
 
-// Board Round Name Helper
 const getRoundName = (index, totalRounds) => {
     if (totalRounds === 0) return "";
     const diff = totalRounds - index - 1;
-
     if (diff === 0) return "Final";
     if (diff === 1) return "Semi-Finals";
     if (diff === 2) return "Quarter-Finals";
