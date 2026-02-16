@@ -1,70 +1,41 @@
-# Getting Started with Create React App
+# 💻 Quadballholic - Frontend UI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+*Note: This repository contains the User Interface for the Quadballholic project. For the main architectural analysis, the Kata requirements, and the backend implementations, please visit our [Main Repository](https://github.com/denizbayan/Quadballholic-backend).*
 
-## Available Scripts
+## 📖 Overview
+This application serves as the unified User Interface for all stakeholders defined in the Kata:
+* **Organization Staff:** To manage tournaments and officials.
+* **Club Managers:** To register teams and manage rosters.
+* **Spectators & Fans:** To view real-time live match updates, leaderboards, and book tickets.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## 🏗️ Architectural Note: API Transparency
+This single frontend application is designed to work seamlessly with **both** of our backend architectural styles:
+1. **The Modular Monolith** (Running directly on `localhost:8080`)
+2. **The Distributed Microservices** (Running behind the API Gateway on `localhost:8080`)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**Why is this important?** By strictly enforcing our API contracts (`/api/...` for REST and `/ws-quadball/...` for WebSockets), we achieved complete **API Transparency**. The frontend client is completely unaware of the underlying infrastructure. Whether it is communicating with a single Spring Boot monolith or dynamically routed via Eureka through a Spring Cloud Gateway, the frontend requires **zero code changes**.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## 🚀 How to Run (Local Environment)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prerequisites
+* Node.js and npm installed.
+* **Important:** You must have one of our backends (Monolith OR Microservices) running on port `8080` before starting the frontend, otherwise API calls will fail.
 
-### `npm run build`
+### Installation & Startup
+1. Open a terminal in the root folder of this repository.
+2. Install the dependencies:
+```bash
+npm install
+```
+3. Start the development server:
+```bash
+npm start
+```
+(If you are using Vite, the command might be npm run dev)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The application will open automatically in your browser at http://localhost:3000.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
