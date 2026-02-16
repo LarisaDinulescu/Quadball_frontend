@@ -23,9 +23,12 @@ const Tournaments = () => {
         setLoading(true);
         try {
             const data = await tournamentService.getAllTournaments();
-            setTournaments(data);
+            // Handle both direct array and Spring Page object structure
+            const tournamentList = Array.isArray(data) ? data : (data?.content || []);
+            setTournaments(tournamentList);
         } catch (err) {
             console.error("Error fetching tournaments", err);
+            setTournaments([]);
         } finally {
             setLoading(false);
         }
@@ -36,7 +39,7 @@ const Tournaments = () => {
         if (window.confirm("Are you sure you want to delete this tournament and all its matches?")) {
             try {
                 await tournamentService.deleteTournament(id);
-                setTournaments(tournaments.filter(t => t.id !== id));
+                setTournaments(prev => prev.filter(t => t.id !== id));
             } catch (err) {
                 console.error("Error deleting tournament", err);
                 alert("Cannot delete the tournament.");
@@ -63,7 +66,6 @@ const Tournaments = () => {
         setLoading(true);
         try {
             await tournamentService.generateBracket(tournamentId);
-            // Re-fetch tournament to show the new bracket
             const updatedMatches = await tournamentService.getEnrichedTournamentMatches(tournamentId);
             setBracketRounds(organizeBracket(updatedMatches));
         } catch (error) {
@@ -75,9 +77,8 @@ const Tournaments = () => {
     };
 
     const organizeBracket = (matches) => {
-        if (!matches || matches.length === 0) return [];
+        if (!Array.isArray(matches) || matches.length === 0) return [];
 
-        // Groups matches by the 'round' property assigned in the service
         const roundsMap = matches.reduce((acc, match) => {
             const r = match.round || 1;
             if (!acc[r]) acc[r] = [];
@@ -88,7 +89,6 @@ const Tournaments = () => {
         const sortedRoundKeys = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
         
         return sortedRoundKeys.map(key => {
-            // Sort matches within the round using id or bracketIndex to keep vertical positions consistent
             return roundsMap[key].sort((a, b) => (a.id || 0) - (b.id || 0));
         });
     };
@@ -137,8 +137,6 @@ const Tournaments = () => {
                                             {roundMatches.map((match, mIdx) => (
                                                 <div key={match.id || mIdx} className="relative py-4 flex flex-col justify-center">
                                                     <BracketMatchCard match={match} />
-                                                    
-                                                    {/* Visual Connectors */}
                                                     {roundIndex < bracketRounds.length - 1 && (
                                                         <>
                                                             <div className="absolute right-[-2rem] top-1/2 w-8 border-t-2 border-slate-300"></div>
@@ -189,7 +187,7 @@ const Tournaments = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {tournaments.length > 0 ? tournaments.map((t) => (
+                            {Array.isArray(tournaments) && tournaments.length > 0 ? tournaments.map((t) => (
                                 <Card key={t.id} className="hover:border-blue-500 transition-all cursor-pointer group shadow-xl bg-white relative overflow-hidden border-none">
                                     <div className="h-1.5 bg-slate-200 group-hover:bg-blue-600 transition-colors" />
                                     <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -226,7 +224,7 @@ const Tournaments = () => {
                                 </Card>
                             )) : (
                                 <div className="col-span-full py-20 text-center text-slate-400 font-bold uppercase tracking-widest border-2 border-dashed rounded-2xl">
-                                    No active tournaments found
+                                    {loading ? "Loading Arena..." : "No active tournaments found"}
                                 </div>
                             )}
                         </div>
@@ -240,7 +238,7 @@ const Tournaments = () => {
 const BracketMatchCard = ({ match }) => {
     const homeScore = match.homeScore ?? null;
     const awayScore = match.awayScore ?? null;
-    const isPlayed = homeScore !== null && awayScore !== null;
+    const isPlayed = homeScore !== null && awayScore !== null && (homeScore !== 0 || awayScore !== 0);
     const isTBD = !match.homeTeamId && !match.awayTeamId;
 
     return (

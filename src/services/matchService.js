@@ -13,9 +13,6 @@ const getAuthHeaders = () => {
 
 const matchService = {
 
-/**
-* Retrieves the list of all matches
-*/
 getAllMatches: async () => {
     try {
         // Added getAuthHeaders() to allow display after change in WebSecurityConfig
@@ -27,9 +24,6 @@ getAllMatches: async () => {
     }
   },
 
-/**
-* Retrieves a specific match by ID
-*/
 getMatchById: async (id) => {
     try {
         // added getAuthHeaders()
@@ -41,10 +35,6 @@ getMatchById: async (id) => {
     }
 },
 
-/**
-* Creates a new match
-* Only accessible by ROLE_ORGANIZATION_MANAGER
-*/
 createMatch: async (matchData) => {
     try {
         const response = await axios.post(API_URL, matchData, { headers: getAuthHeaders() });
@@ -55,9 +45,6 @@ createMatch: async (matchData) => {
     }
 },
 
-/**
-* Updates an existing match's data
-*/
 updateMatch: async (id, matchData) => {
     try {    
         const response = await axios.put(`${API_URL}/${id}`, matchData, { headers: getAuthHeaders() });
@@ -68,9 +55,7 @@ updateMatch: async (id, matchData) => {
     }
 },
 
-/**
-* Deletes a match from the system
-*/
+
 deleteMatch: async (id) => {
     try {
         const response = await axios.delete(`${API_URL}/${id}`, { headers: getAuthHeaders() });
@@ -81,17 +66,12 @@ deleteMatch: async (id) => {
     }
 },
 
-/**
-* Submit the roster (starting and bench) for a specific team
-*/
+
 submitRoster: async (matchId, rosterData) => {
     const response = await axios.post(`${API_URL}/${matchId}/submit-roster`, rosterData, { headers: getAuthHeaders() });
     return response.data;
 },
 
-/**
-* Start the match via LiveEventLauncher
-*/
 startMatch: async (id) => {
     const response = await axios.post(`${API_URL}/${id}/start-match`, {}, { headers: getAuthHeaders() });
     return response.data;
