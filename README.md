@@ -64,7 +64,7 @@ WebSockets: `http://localhost:8080/ws-quadball/...`
 
 # Part II: Architectural Design
 ## The Choice of a Monolithic Frontend
-While microservices are heavily utilized in our backend architecture, we deliberately chose to build a Monolithic Frontend. Although the micro-frontend pattern exists and can be applied to UIs, we evaluated the trade-offs and decided against it for this specific project.
+While microservices are heavily utilized in our backend architecture, we deliberately chose to build a Monolithic Frontend. 
 
 In typical web applications of this scope, the performance and scaling bottleneck resides almost entirely within the backend (data processing, concurrent transactions, database locks). Introducing micro-frontends would have added unnecessary infrastructure overhead, complex deployment pipelines, and state-sharing complications. We preferred simplicity and a cohesive developer experience, ensuring a lightweight, fast, and unified React application.
 
