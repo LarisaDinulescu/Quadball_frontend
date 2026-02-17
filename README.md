@@ -57,7 +57,9 @@ Our backend is equipped with a `DataSeedingConfig` that populates the database o
 **Frontend Integration URLs**
 
 The frontend communicates with the backend via the following base endpoints:
+
 REST API: `http://localhost:8080/api/...`
+
 WebSockets: `http://localhost:8080/ws-quadball/...`
 
 # Part II: Architectural Design
