@@ -24,6 +24,7 @@ Thanks to containerization, setting up the frontend is incredibly straightforwar
 Open a terminal in the root folder of this repository and simply build the image using docker compose. The Dockerfile handles the npm install and builds the application automatically in isolated containers.
 
 **Using Local npm (Alternative):**
+
 If you prefer to run it locally without Docker:
 ```bash
 npm install
