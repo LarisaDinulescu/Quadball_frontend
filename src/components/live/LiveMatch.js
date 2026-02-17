@@ -150,7 +150,7 @@ export default function LiveMatch() {
         return {
             borderColor: "border-blue-100",
             icon: <Calendar size={14} className="text-slate-400 mr-1" />,
-            label: "SCHEDULED",
+            label: "SCHEDULED: " + (match.date || "TBA"),
             labelClass: "text-slate-400 font-black tracking-widest",
             scoreClass: "text-slate-300",
             showMinute: false
@@ -165,6 +165,7 @@ export default function LiveMatch() {
         // Display logic
         const isFinished = match.isMatchFinished === true;
         const isStarted = match.homeScore !== null;
+        const isPreviousRoundComplete = match.homeTeamId !== null && match.awayTeamId !== null;
 
         // Live shows are always visible
         if (isStarted && !isFinished) return true;
@@ -173,7 +174,7 @@ export default function LiveMatch() {
         if (isFinished) return true;
 
         // Manager sees the scheduled
-        if (userIsManager && !isStarted) return true;
+        if (userIsManager && !isStarted && isPreviousRoundComplete ) return true;
 
         // Users see today's scheduled
         if (!isStarted && match.date === today) return true;
