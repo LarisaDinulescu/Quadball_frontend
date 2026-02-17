@@ -21,6 +21,7 @@ Thanks to containerization, setting up the frontend is incredibly straightforwar
 
 ### 2.2 Installation and Build Instructions
 **Using Docker (Recommended):**
+
 Open a terminal in the root folder of this repository and simply build the image using docker compose. The Dockerfile handles the npm install and builds the application automatically in isolated containers.
 
 **Using Local npm (Alternative):**
@@ -54,6 +55,7 @@ Our backend is equipped with a `DataSeedingConfig` that populates the database o
   * Password: 123456
 
 **Frontend Integration URLs**
+
 The frontend communicates with the backend via the following base endpoints:
 REST API: `http://localhost:8080/api/...`
 WebSockets: `http://localhost:8080/ws-quadball/...`
@@ -82,6 +84,4 @@ The UI is divided into several core functional areas mapped to the business doma
 * **Booking & Ticketing**: A dedicated flow for spectators to reserve seats for upcoming matches, complete with a user profile dashboard to track ticket codes and seat numbers.
 
 * **Team & Roster Configuration**: CRUD interfaces allowing managers to register new Quadball teams, add players, and assign match officials (Referees) to stadiums.
-
----
 
