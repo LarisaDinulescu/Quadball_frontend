@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import teamService from "../../services/teamService";
-import { hasRole } from "../../services/authService"; 
+import playerService from "../../services/playerService";
+import { hasRole, isManagerOf } from "../../services/authService"; 
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Plus, Users, Shield, MapPin, Trash2, Edit3 } from "lucide-react";
@@ -21,6 +22,21 @@ export default function TeamsPage() {
       setLoading(true);
       const data = await teamService.getAllTeams();
       setTeams(data);
+      const playerData = await playerService.getAllPlayers();
+      // Map player counts to teams
+      const playersByTeam = playerData.reduce((acc, player) => {
+        const tId = String(player.team_id); 
+        if (!acc[tId]) acc[tId] = [];
+        acc[tId].push(player);
+        return acc;
+      }, {});
+      console.log("Players by Team:", playersByTeam); // Debugging output
+      const enrichedTeams = data.map(team => ({
+        ...team,
+        players: playersByTeam[String(team.id)] || []
+      }));
+
+      setTeams(enrichedTeams);
     } catch (err) {
       if (err.response?.status === 401) {
         alert("Session expired. Please log in again.");
@@ -106,7 +122,7 @@ export default function TeamsPage() {
                     View Roster
                   </Button>
                   
-                  {canModify && (
+                  {canModify && isManagerOf(team.manager) && (
                     <div className="flex gap-2">
                       <Button 
                         variant="ghost" 

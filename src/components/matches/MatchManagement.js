@@ -6,10 +6,12 @@ import { hasRole } from "../../services/authService";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "../ui/dialog";
-import { Plus, Trash2, Loader2, Calendar, Edit, Ticket } from "lucide-react"; 
+import { Play, Trash2, Loader2, Calendar, Edit, Ticket } from "lucide-react"; 
 import MatchForm from "./MatchForm"; 
+import { useNavigate } from "react-router-dom";
 
 export default function MatchManagement() {
+  const navigate = useNavigate(); // Bunu ekle
   const [matches, setMatches] = useState([]);
   const [teams, setTeams] = useState({}); 
   const [loading, setLoading] = useState(true);
@@ -37,8 +39,12 @@ export default function MatchManagement() {
       const teamMap = {};
       teamData.forEach(t => teamMap[t.id] = t.name);
       
+            
+      const sortedMatches = [...matchData].sort((a, b) => {
+        return new Date(a.date) - new Date(b.date);
+      });
       setTeams(teamMap);
-      setMatches(matchData);
+      setMatches(sortedMatches);
     } catch (err) {
       console.error("Error loading data", err);
     } finally {
@@ -99,8 +105,8 @@ export default function MatchManagement() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  const upcomingMatches = matches.filter(m => m.date >= today);
-  const pastMatches = matches.filter(m => m.date < today);
+  const upcomingMatches = matches.filter(m => m.date >= today && m.snitchCaughtByTeamId === null);
+  const pastMatches = matches.filter(m => m.date < today || (m.snitchCaughtByTeamId !== null));
 
   const MatchCard = ({ match, isPast }) => (
     <Card className={`bg-white border-none shadow-md border-t-4 ${isPast ? 'border-slate-300' : 'border-indigo-600'}`}>
@@ -110,8 +116,27 @@ export default function MatchManagement() {
             <Calendar size={14} />
             <span className="text-[10px] font-bold uppercase">{match.date}</span>
           </div>
-          {isManager && !isPast && (
+            {isManager && !isPast && 
+           match.homeScore === null && 
+           match.awayScore === null && 
+           match.homeTeamId !== null && 
+           match.awayTeamId !== null && (
             <div className="flex gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={async () => {
+                  try {
+                    await matchService.startMatch(match.id);
+                    fetchData(); // Sayfayı yenilemek için verileri tekrar çekiyoruz
+                  } catch (err) {
+                    console.error("Error starting match:", err);
+                    alert("Could not start the match.");
+                  }
+                }}
+              >
+                <Play size={18} className="text-slate-300 hover:text-green-600"/>
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => { setEditingMatch(match); setIsDialogOpen(true); }}>
                 <Edit size={18} className="text-slate-300 hover:text-indigo-600"/>
               </Button>
@@ -130,6 +155,25 @@ export default function MatchManagement() {
 
           {!isPast && (
           <div className="mt-6">
+            {match.homeScore !== null && match.awayScore !== null ? (
+              match.snitchCaughtByTeamId === null ? (
+                /* Snitch yakalanmadıysa Live butonu */
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[10px] tracking-widest animate-pulse"
+                  onClick={() => navigate(`/live`)}
+                >
+                  Go To Live Section
+                </Button>
+              ) : (
+                /* Maç tamamen bittiyse Skor görünümü */
+                <div className="w-full py-2 bg-slate-100 rounded-lg text-center">
+                  <span className="text-slate-900 font-black text-xl tracking-tighter">
+                    {match.homeScore} — {match.awayScore}
+                  </span>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Final Score</p>
+                </div>
+              )
+            ) : (
             <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-[10px] tracking-widest"
               onClick={() => {
@@ -140,9 +184,9 @@ export default function MatchManagement() {
             >
               <Ticket size={14} className="mr-2" /> Book Now
             </Button>
+            )}
           </div>
-        )}
-
+        )}        
         {isPast && (
           <div className="mt-4 pt-4 border-t border-slate-50 flex justify-center">
             <div className="text-center bg-slate-100 px-4 py-1 rounded-full">

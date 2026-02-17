@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import reservationService from '../../services/reservationService';
+import teamService from '../../services/teamService';
+import matchService from '../../services/matchService';
+import { getUsername } from '../../services/userService';
 
 const AdminReservations = () => {
   const [reservations, setReservations] = useState([]);
@@ -27,8 +30,40 @@ const AdminReservations = () => {
 
   const fetchReservations = async () => {
     try {
-      const data = await reservationService.getAllReservations();
-      setReservations(data);
+      const [resData, allTeams, allMatches] = await Promise.all([
+        reservationService.getAllReservations(),
+        teamService.getAllTeams(),
+        matchService.getAllMatches()
+      ]);
+
+      const teamDict = allTeams.reduce((acc, team) => {
+        acc[team.id] = team.name;
+        return acc;
+      }, {});
+
+      const matchDict = allMatches.reduce((acc, match) => {
+        acc[match.id] = (teamDict[match.homeTeamId] || "TBD") + " vs " + (teamDict[match.awayTeamId] || "TBD");
+        return acc;
+      }, {});
+
+      const uniqueUserIds = [...new Set(resData.map(r => r.userId))];
+      
+      const userNamesArray = await Promise.all(
+        uniqueUserIds.map(id => getUsername(id).catch(() => "Unknown User"))
+      );
+
+      const userDict = uniqueUserIds.reduce((acc, id, index) => {
+        acc[id] = userNamesArray[index];
+        return acc;
+      }, {});
+
+      const enrichedReservations = resData.map(res => ({
+        ...res,
+        userName: userDict[res.userId] || "Unknown User",
+        matchInfo: matchDict[res.matchId] || "Tournament Match"
+      }));
+
+      setReservations(enrichedReservations);
     } catch (error) {
       console.error("Failed to load reservations", error);
     } finally {
@@ -115,12 +150,12 @@ const AdminReservations = () => {
                           <div className="bg-slate-100 p-2 rounded-full text-slate-400">
                             <User size={16} />
                           </div>
-                          <span className="text-sm font-semibold text-slate-700">{res.spectatorEmail}</span>
+                          <span className="text-sm font-semibold text-slate-700">{res.userName}</span>
                         </div>
                       </td>
                       <td className="p-5">
                         <div className="space-y-1">
-                          <p className="font-bold text-slate-900 text-sm">{res.matchName || "Tournament Match"}</p>
+                          <p className="font-bold text-slate-900 text-sm">{res.matchInfo || "Tournament Match"}</p>
                           <p className="text-xs text-slate-500 flex items-center gap-1">
                             <Ticket size={12} /> Stadium ID: {res.stadiumId}
                           </p>
@@ -128,7 +163,7 @@ const AdminReservations = () => {
                       </td>
                       <td className="p-5 text-center">
                         <span className="bg-slate-100 text-slate-700 font-bold px-3 py-1 rounded-full text-xs">
-                          {res.seatCount} SEATS
+                          SEATS: {res.seatNumber} 
                         </span>
                       </td>
                       <td className="p-5 text-right">

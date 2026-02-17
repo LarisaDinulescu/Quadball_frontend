@@ -1,22 +1,14 @@
-import axios from 'axios';
+import api from "./api";
 
-const API_URL = 'http://localhost:8080/api/matches'; 
+const API_URL = '/matches'; 
 
-// Internal function to get headers with token
-const getAuthHeaders = () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.accessToken) {
-        return { Authorization: `Bearer ${user.accessToken}` };
-    }
-    return {};
-};
 
 const matchService = {
 
 getAllMatches: async () => {
     try {
         // Added getAuthHeaders() to allow display after change in WebSecurityConfig
-        const response = await axios.get(API_URL, { headers: getAuthHeaders() });
+        const response = await api.get(API_URL);
         return response.data;
     } catch (error) {
         console.error("Error fetching matches:", error);
@@ -27,7 +19,7 @@ getAllMatches: async () => {
 getMatchById: async (id) => {
     try {
         // added getAuthHeaders()
-        const response = await axios.get(`${API_URL}/${id}`, { headers: getAuthHeaders() });
+        const response = await api.get(`${API_URL}/${id}`);
         return response.data;
     } catch(error) {
         console.error(`Error fetching match ${id}:`, error);
@@ -37,7 +29,7 @@ getMatchById: async (id) => {
 
 createMatch: async (matchData) => {
     try {
-        const response = await axios.post(API_URL, matchData, { headers: getAuthHeaders() });
+        const response = await api.post(API_URL, matchData);
         return response.data;
     } catch (error) {
         console.error("Error creating match:", error.response?.data || error.message);
@@ -47,7 +39,7 @@ createMatch: async (matchData) => {
 
 updateMatch: async (id, matchData) => {
     try {    
-        const response = await axios.put(`${API_URL}/${id}`, matchData, { headers: getAuthHeaders() });
+        const response = await api.put(`${API_URL}/${id}`, matchData);
         return response.data;
     } catch (error) {
         console.error(`Error updating match ${id}:`, error);
@@ -58,7 +50,7 @@ updateMatch: async (id, matchData) => {
 
 deleteMatch: async (id) => {
     try {
-        const response = await axios.delete(`${API_URL}/${id}`, { headers: getAuthHeaders() });
+        const response = await api.delete(`${API_URL}/${id}`);
         return response.data;
     } catch (error) {
       console.error(`Error deleting match ${id}:`, error);
@@ -68,12 +60,12 @@ deleteMatch: async (id) => {
 
 
 submitRoster: async (matchId, rosterData) => {
-    const response = await axios.post(`${API_URL}/${matchId}/submit-roster`, rosterData, { headers: getAuthHeaders() });
+    const response = await api.post(`${API_URL}/${matchId}/submit-roster`, rosterData);
     return response.data;
 },
 
 startMatch: async (id) => {
-    const response = await axios.post(`${API_URL}/${id}/start-match`, {}, { headers: getAuthHeaders() });
+    const response = await api.post(`${API_URL}/${id}/start-match`, {});
     return response.data;
 }
 

@@ -23,3 +23,8 @@ export const changePassword = async (userId, oldPassword, newPassword) => {
     });
     return response.data;
 };
+
+export const getUsername = async (userId) => {
+    const response = await api.get(`/users/${userId}/name`);
+    return response.data;
+};

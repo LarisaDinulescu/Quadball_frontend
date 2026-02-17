@@ -38,7 +38,7 @@ export const login = async (email, password) => {
  * @param {string} token 
  */
 export const activateAccount = async (token) => {
-  return await api.get(`${AUTH_URL}/activate-account`, { params: { token } });
+  return await api.post(`${AUTH_URL}/activate-account`, { params: { token } });
 };
 
 /**
@@ -47,7 +47,7 @@ export const activateAccount = async (token) => {
  * @param {string} email 
  */
 export const forgetPassword = async (email) => {
-  return await api.get(`${AUTH_URL}/forget-password`, { params: { email } });
+  return await api.post(`${AUTH_URL}/forget-password`, { "email": email  });
 };
 
 /**
@@ -94,5 +94,19 @@ export const hasRole = (requiredRoles) => {
         const userRoleString = typeof r === 'object' ? (r.roleName || r.authority || r.name) : r;
 
         return rolesToCheck.includes(userRoleString);
+    });
+};
+
+export const isManagerOf = (teamManagerId) => {
+    const user = getSessionData();
+
+    if (!user || !user.roles) return false;
+
+    const rolesToCheck = ['ROLE_TEAM_MANAGER'];
+
+    return user.roles.some(r => {
+        const userRoleString = typeof r === 'object' ? (r.roleName || r.authority || r.name) : r;
+
+        return (rolesToCheck.includes(userRoleString)) && (teamManagerId === user.id);
     });
 };

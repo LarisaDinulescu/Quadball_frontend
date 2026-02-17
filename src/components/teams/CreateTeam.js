@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import teamService from "../../services/teamService";
+import playerService from "../../services/playerService";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -30,10 +31,13 @@ export default function CreateTeam() {
             name: data.name || "",
             city: data.city || ""
           });
-          
+
+        const allPlayers = await playerService.getAllPlayers();
+        const teamPlayers = allPlayers.filter(p => String(p.team_id) === String(id));
+        console.log("fetched teamPlayers:", teamPlayers);
           // Populate members if they exist in the backend response
-          if (data.memberNames && data.memberNames.length > 0) {
-            setMembers(data.memberNames);
+          if (teamPlayers.length > 0) {
+            setMembers(teamPlayers.map(p => p.name || ""));
           } else if (data.players) {
             setMembers(data.players.map(p => p.name || p));
           }
