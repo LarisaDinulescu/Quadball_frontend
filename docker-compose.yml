@@ -1,0 +1,7 @@
+services:
+  frontend:
+    image: ec2m/quadballholic-frontend:latest
+    container_name: quadball_frontend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
